@@ -10,12 +10,15 @@ import sys
 import io
 import threading
 import time
-"""
-with open("SR_sub",'r') as f:
-	C = json.load(f)
-"""
 
 def parseCMUMotionData(filename):
+	"""
+	In this experiments, we use the CMU Motion Data
+	http:// mocap.cs.cmu.edu
+	subject86, trial{2,5}
+	this function would return data X with dimension M * N, 
+	where M is the sample size and N is the number of feature
+	"""
 	X = []
 	with open(filename,'r') as f:
 		f.readline()
@@ -52,6 +55,30 @@ def solveL1NormExactly(A,b):
 	return linprog(c,G,h)
 
 def constructSR(X,zeroThreshold=1e-10,aprxInf=9e+4):
+	"""
+	First solve 
+
+		minimize ||c||_1 + aprxInf^2 * ||c^T X_{-n} - x_n||_2^2
+
+	which is an approximation of
+
+		minimize ||c||_1
+			s.t  c^T X_{-n} = x_n
+
+	provided that aprxInf is sufficiently large.
+	Let c* denotes the solution to the above problem.
+	Since (Mahdi Soltanolkotabi et al. Robust Subspace Clustering, 2013) found that
+	better choice of lambda is around 1/sqrt(dimension),
+	where 
+			sqrt(dimension) ~= 0.25 / ||c*||_1
+
+	Therefore, we formulate the second-phase optimization problem as
+
+		minimize ||c_1|| + (4*||c*||_1 / 2)||c^T X_{-n} - x_n||_2
+	
+	This function will find the Sparse Representation for each instance sequentially,
+	and then return C = [c_1, c_2, c_3, ...]
+	"""
 	C = []
 	for n in xrange(len(X)):
 		A = X
@@ -65,6 +92,10 @@ def constructSR(X,zeroThreshold=1e-10,aprxInf=9e+4):
 		C.append(c)
 	return C
 def constructAffinityGraph(C):
+	"""
+	Given Sparse Representation matrix,
+	construct an networkx.Graph() opbject
+	"""
 	G = nx.Graph()
 	for i in xrange(len(C)):
 		for j in xrange(i+1,len(C)):
@@ -72,6 +103,11 @@ def constructAffinityGraph(C):
 	return G
 
 def spectralClustering(G):
+	"""
+	perform spectral clustering on the laplacian of Sparse Representation.
+	The input is the networkx.Graph() object constructed by Sparse Representation.
+	This function will return each subspace label for each instance in the form of list.
+	"""
 	L = nx.laplacian_matrix(G).todense()
 	w,v = scipy.linalg.eig(L)
 	v = v.T
@@ -89,16 +125,23 @@ def spectralClustering(G):
 	return result
 
 def fastSSC(X,filename="",numThreads=16,zeroThreshold=1e-10,aprxInf=9e+4,write=False):
+	"""
+	perform
+		constructSR -> constructAffinityGraph -> spectralClustering
+	in a multi-threading way.
+	"""
 	C = np.zeros((len(X),len(X)))
 	class SRcalculator(threading.Thread):
-		def __init__(self, idxList):
+		def __init__(self, idxList, numTotal):
 			threading.Thread.__init__(self)
 			self.idxList = idxList
+			self.tC = np.zeros((len(idxList),numTotal))
 		def run(self):
-			calculateL1regLS(self.idxList)
+			calculateL1regLS(self.tC,self.idxList)
 
-	def calculateL1regLS(idxList):
-		for n in idxList:
+	def calculateL1regLS(tC,idxList):
+		for idx in xrange(len(idxList)):
+			n = idxList[idx]
 			A = X
 			A = np.delete(A,n,axis=0)
 			w = solveL1NormWithRelaxation(matrix(A).T*aprxInf,matrix(X[n])*aprxInf)# Approximate to the l1-norm minimization with equality constraint
@@ -106,18 +149,22 @@ def fastSSC(X,filename="",numThreads=16,zeroThreshold=1e-10,aprxInf=9e+4,write=F
 			w = solveL1NormWithRelaxation(matrix(A).T*lambd,matrix(X[n])*lambd)
 			for i in xrange(n):
 				if abs(w[i]) > zeroThreshold:
-					C[n][i] = w[i]
-				else:C[n][i] = 0
+					tC[idx][i] = w[i]
+				else:tC[idx][i] = 0
 			for i in xrange(n,len(w)):
 				if abs(w[i]) > zeroThreshold:
-					C[n][i+1] = w[i]
-				else:C[n][i+1] = 0
+					tC[idx][i+1] = w[i]
+				else:tC[idx][i+1] = 0
+		for idx in xrange(len(idxList)):
+			n = idxList[idx]
+			for j in xrange(len(C[n])):
+				C[n][j] = tC[idx][j]
 
 	Threads = []
 	for i in xrange(numThreads):
 		if i == numThreads-1:
-			Threads.append(SRcalculator(range(i*(len(X)/numThreads),len(X))))
-		else: Threads.append(SRcalculator(range(i*(len(X)/numThreads),(i+1)*(len(X)/numThreads))))
+			Threads.append(SRcalculator(range(i*(len(X)/numThreads),len(X)),len(X)))
+		else: Threads.append(SRcalculator(range(i*(len(X)/numThreads),(i+1)*(len(X)/numThreads)),len(X)))
 	for t in Threads:
 		t.start()
 	for t in Threads:
@@ -142,6 +189,10 @@ def sparseSubspaceClustering(X,filename,zeroThreshold=1e-10,aprxInf=9e+4):
 	return fastSSC(X,filename,numThreads=16,zeroThreshold=1e-10,aprxInf=9e+4,write=True)
 
 def subSampling(S,T=set()):
+	"""
+	Construct subsample according to 
+	(Steve Hanneke. The Optimal Sample Complexity of PAC Learning, 2016)
+	"""
 	if len(S) <= 3:
 		return [list(S.union(T))]
 	size = len(S)/4
@@ -155,6 +206,15 @@ def subSampling(S,T=set()):
 	return R
 
 def ensembleSparseSubspaceClustering(X,filename,zeroThreshold=1e-10,aprxInf=9e+4):
+	"""
+	The method proposed in our work.
+	First construct subsamples according to 
+	(Steve Hanneke. The Optimal Sample Complexity of PAC Learning, 2016),
+	then apply Robust Subspace Clustering on each subsample to get a set of clustering results.
+	Base on these results to construct the final graph.
+	We use majority voting to decide whether there should be an edge between each pair of instances.
+	Finally, apply spectral clustering on the final graph.
+	"""
 	subSamples = subSampling(range(len(X)))
 	A = dict()
 	numSubSample = len(subSamples)
