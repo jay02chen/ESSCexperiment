@@ -114,7 +114,7 @@ def ensembleSparseSubspaceClustering(X,filename,zeroThreshold=1e-10,aprxInf=3e+2
 	A = dict()
 	numSubSample = len(subSamples)
 	for subsample in subSamples:
-		C = constructSR(subsample,zeroThreshold,aprxInf)
+		C = constructSR(X[subsample],zeroThreshold,aprxInf)
 		result = spectralClustering(constructAffinityGraph(C))
 		for i in xrange(len(result)):
 			for j in xrange(i+1,len(result)):
@@ -132,8 +132,15 @@ def ensembleSparseSubspaceClustering(X,filename,zeroThreshold=1e-10,aprxInf=3e+2
 	return result
 
 if __name__ == "__main__":
-	filename = sys.argv[1]
+	filename = "trail2"
 	X = parseCMUMotionData(filename)
 	X = np.array(X)
 	X = normalize(X,axis=1)
+	ensembleSparseSubspaceClustering(X,filename,zeroThreshold=1e-10,aprxInf=3e+2)
+	sparseSubspaceClustering(X,filename,zeroThreshold=1e-10,aprxInf=3e+2)
+	filename = "trail5"
+	X = parseCMUMotionData(filename)
+	X = np.array(X)
+	X = normalize(X,axis=1)
+	ensembleSparseSubspaceClustering(X,filename,zeroThreshold=1e-10,aprxInf=3e+2)
 	sparseSubspaceClustering(X,filename,zeroThreshold=1e-10,aprxInf=3e+2)
