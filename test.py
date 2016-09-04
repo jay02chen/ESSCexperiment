@@ -49,17 +49,16 @@ def solveL1NormExactly(A,b):
 	h = np.hstack((b,-b,np.zeros((X.shape[1]*2))))
 	return linprog(c,G,h)
 
-def constructSR(X,zeroThreshold=1e-10,aprxInf=3e+2):
+def constructSR(X,zeroThreshold=1e-10,aprxInf=9e+4):
 	C = []
 	for n in xrange(len(X)):
 		A = X
 		A = np.delete(A,n,axis=0)
-		lambd = aprxInf 							  # Approximate to the l1-norm minimization with equality constraint
-		w = solveL1NormWithRelaxation(matrix(A).T*lambd**2,matrix(X[n])*lambd**2)
-		lambd = 0.25/np.sum(np.abs(np.array(w)))  # Estimate the dimension of subspace and find a proper lambda
-		w = solveL1NormWithRelaxation(matrix(A).T*lambd**2,matrix(X[n])*lambd**2)
+		w = solveL1NormWithRelaxation(matrix(A).T*aprxInf,matrix(X[n])*aprxInf)# Approximate to the l1-norm minimization with equality constraint
+		lambd = np.sqrt(2*np.sum(np.abs(np.array(w))))  # Estimate the dimension of subspace and find a proper lambda
+		w = solveL1NormWithRelaxation(matrix(A).T*lambd,matrix(X[n])*lambd)
 		c = [max(np.sign(abs(s)-zeroThreshold)*s,0) for s in w]
-		print n,lambd
+		print n,1./(2*lambd)
 		c.insert(n,0)
 		C.append(c)
 	return C
@@ -87,7 +86,7 @@ def spectralClustering(G):
 	result = km.fit_predict(np.array(v).T)
 	return result
 
-def sparseSubspaceClustering(X,filename,zeroThreshold=1e-10,aprxInf=3e+2):
+def sparseSubspaceClustering(X,filename,zeroThreshold=1e-10,aprxInf=9e+4):
 	C = constructSR(X,zeroThreshold,aprxInf)
 	with open("SR_"+filename,'w+') as f:
 		json.dump(C,f)
@@ -109,7 +108,7 @@ def subSampling(S,T=set()):
 	R.extend(subSampling(S0,S3))
 	return R
 
-def ensembleSparseSubspaceClustering(X,filename,zeroThreshold=1e-10,aprxInf=3e+2):
+def ensembleSparseSubspaceClustering(X,filename,zeroThreshold=1e-10,aprxInf=9e+4):
 	subSamples = subSampling(range(len(X)))
 	A = dict()
 	numSubSample = len(subSamples)
@@ -136,11 +135,11 @@ if __name__ == "__main__":
 	X = parseCMUMotionData(filename)
 	X = np.array(X)
 	X = normalize(X,axis=1)
-	ensembleSparseSubspaceClustering(X,filename,zeroThreshold=1e-10,aprxInf=3e+2)
-	sparseSubspaceClustering(X,filename,zeroThreshold=1e-10,aprxInf=3e+2)
+	ensembleSparseSubspaceClustering(X,filename,zeroThreshold=1e-10,aprxInf=9e+4)
+	sparseSubspaceClustering(X,filename,zeroThreshold=1e-10,aprxInf=9e+4)
 	filename = "trial5"
 	X = parseCMUMotionData(filename)
 	X = np.array(X)
 	X = normalize(X,axis=1)
-	ensembleSparseSubspaceClustering(X,filename,zeroThreshold=1e-10,aprxInf=3e+2)
-	sparseSubspaceClustering(X,filename,zeroThreshold=1e-10,aprxInf=3e+2)
+	ensembleSparseSubspaceClustering(X,filename,zeroThreshold=1e-10,aprxInf=9e+4)
+	sparseSubspaceClustering(X,filename,zeroThreshold=1e-10,aprxInf=9e+4)
