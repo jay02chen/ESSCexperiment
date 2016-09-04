@@ -58,7 +58,7 @@ def constructSR(X,zeroThreshold=1e-10,aprxInf=9e+4):
 		lambd = np.sqrt(2*np.sum(np.abs(np.array(w))))  # Estimate the dimension of subspace and find a proper lambda
 		w = solveL1NormWithRelaxation(matrix(A).T*lambd,matrix(X[n])*lambd)
 		c = [max(np.sign(abs(s)-zeroThreshold)*s,0) for s in w]
-		print n,1./(2*lambd)
+		print n,(2*lambd**2)**2  #print index and dimension of subspace
 		c.insert(n,0)
 		C.append(c)
 	return C
