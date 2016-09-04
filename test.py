@@ -132,13 +132,13 @@ def ensembleSparseSubspaceClustering(X,filename,zeroThreshold=1e-10,aprxInf=3e+2
 	return result
 
 if __name__ == "__main__":
-	filename = "trail2"
+	filename = "trial2"
 	X = parseCMUMotionData(filename)
 	X = np.array(X)
 	X = normalize(X,axis=1)
 	ensembleSparseSubspaceClustering(X,filename,zeroThreshold=1e-10,aprxInf=3e+2)
 	sparseSubspaceClustering(X,filename,zeroThreshold=1e-10,aprxInf=3e+2)
-	filename = "trail5"
+	filename = "trial5"
 	X = parseCMUMotionData(filename)
 	X = np.array(X)
 	X = normalize(X,axis=1)
