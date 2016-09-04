@@ -1,15 +1,16 @@
 import numpy as np
 import scipy
 import json
-from l1regls import l1regls
-from sklearn.preprocessing import normalize
-from sklearn.cluster import KMeans
-from cvxopt import matrix
 import networkx as nx
 import sys
 import io
 import threading
 import time
+from l1regls import l1regls
+from sklearn.preprocessing import normalize
+from sklearn.cluster import KMeans
+from cvxopt import matrix
+from networkx.readwrite import json_graph
 
 def parseCMUMotionData(filename):
 	"""
@@ -179,6 +180,14 @@ def fastSSC(X,filename="",numThreads=16,zeroThreshold=1e-10,aprxInf=9e+4,write=F
 	return result
 
 def sparseSubspaceClustering(X,filename,zeroThreshold=1e-10,aprxInf=9e+4):
+	"""
+	The original sparse subspace clustering proposed in 
+	(Ehsan Elhamifar, et al. Sparse Subspace Clustering, 2009)
+	which consists of three steps:
+		I. 		find sparse representation for each instance
+		II. 	construct affinity matrix based on the sparse representation
+		III. 	apply spectral clustering on the affinity matrix
+	"""
 	# C = constructSR(X,zeroThreshold,aprxInf)
 	# with open("SR_"+filename,'w+') as f:
 	# 	json.dump(C,f)
@@ -232,22 +241,37 @@ def ensembleSparseSubspaceClustering(X,filename,zeroThreshold=1e-10,aprxInf=9e+4
 	for edge in A:
 		if A[edge]*2 > numSubSample:  		#majority voting
 			G.add_edge(edge[0],edge[1])
+	with open("Ensemble_graph"+filename,'w+') as f:
+		json.dump(json_graph.node_link_data(G),f)
 	result = spectralClustering(G)
-	with open("Ensenble_result"+filename,'w+') as f:
+	with open("Ensemble_result"+filename,'w+') as f:
 		json.dump(result,f)
 	return result
-
 if __name__ == "__main__":
 	filename = "trial2"
 	X = parseCMUMotionData(filename)
 	X = np.array(X)
 	X = normalize(X,axis=1)
+	# ensembleSparseSubspaceClustering(X,filename,zeroThreshold=1e-10,aprxInf=9e+4)
+	# sparseSubspaceClustering(X,filename,zeroThreshold=1e-10,aprxInf=9e+4)
+
+	filename = "trial5"
+	X = parseCMUMotionData(filename)
+	X = np.array(X)
+	X = normalize(X,axis=1)
+	# ensembleSparseSubspaceClustering(X,filename,zeroThreshold=1e-10,aprxInf=9e+4)
+	# sparseSubspaceClustering(X,filename,zeroThreshold=1e-10,aprxInf=9e+4)
+
+	filename = "trial2"
+	X = parseCMUMotionData(filename)
+	X = np.array(X)
+	X = normalize(X,axis=1)
 	ensembleSparseSubspaceClustering(X,filename,zeroThreshold=1e-10,aprxInf=9e+4)
-	sparseSubspaceClustering(X,filename,zeroThreshold=1e-10,aprxInf=9e+4)
+	# sparseSubspaceClustering(X,filename,zeroThreshold=1e-10,aprxInf=9e+4)
 
 	filename = "trial5"
 	X = parseCMUMotionData(filename)
 	X = np.array(X)
 	X = normalize(X,axis=1)
 	ensembleSparseSubspaceClustering(X,filename,zeroThreshold=1e-10,aprxInf=9e+4)
-	sparseSubspaceClustering(X,filename,zeroThreshold=1e-10,aprxInf=9e+4)
+	# sparseSubspaceClustering(X,filename,zeroThreshold=1e-10,aprxInf=9e+4)
