@@ -8,6 +8,8 @@ from cvxopt import matrix
 import networkx as nx
 import sys
 import io
+import threading
+import time
 """
 with open("SR_sub",'r') as f:
 	C = json.load(f)
@@ -86,14 +88,58 @@ def spectralClustering(G):
 	result = km.fit_predict(np.array(v).T)
 	return result
 
-def sparseSubspaceClustering(X,filename,zeroThreshold=1e-10,aprxInf=9e+4):
-	C = constructSR(X,zeroThreshold,aprxInf)
-	with open("SR_"+filename,'w+') as f:
-		json.dump(C,f)
+def fastSSC(X,filename="",numThreads=16,zeroThreshold=1e-10,aprxInf=9e+4,write=False):
+	C = np.zeros((len(X),len(X)))
+	class SRcalculator(threading.Thread):
+		def __init__(self, idxList):
+			threading.Thread.__init__(self)
+			self.idxList = idxList
+		def run(self):
+			calculateL1regLS(self.idxList)
+
+	def calculateL1regLS(idxList):
+		for n in idxList:
+			A = X
+			A = np.delete(A,n,axis=0)
+			w = solveL1NormWithRelaxation(matrix(A).T*aprxInf,matrix(X[n])*aprxInf)# Approximate to the l1-norm minimization with equality constraint
+			lambd = np.sqrt(2*np.sum(np.abs(np.array(w))))  # Estimate the dimension of subspace and find a proper lambda
+			w = solveL1NormWithRelaxation(matrix(A).T*lambd,matrix(X[n])*lambd)
+			for i in xrange(n):
+				if abs(w[i]) > zeroThreshold:
+					C[n][i] = w[i]
+				else:C[n][i] = 0
+			for i in xrange(n,len(w)):
+				if abs(w[i]) > zeroThreshold:
+					C[n][i+1] = w[i]
+				else:C[n][i+1] = 0
+
+	Threads = []
+	for i in xrange(numThreads):
+		if i == numThreads-1:
+			Threads.append(SRcalculator(range(i*(len(X)/numThreads),len(X))))
+		else: Threads.append(SRcalculator(range(i*(len(X)/numThreads),(i+1)*(len(X)/numThreads))))
+	for t in Threads:
+		t.start()
+	for t in Threads:
+		t.join()
+	if write:
+		with open("SR_"+filename,'w+') as f:
+			json.dump(C,f)
 	result = spectralClustering(constructAffinityGraph(C))
-	with open("result"+filename,'w+') as f:
-		json.dump(result,f)
+	if write:
+		with open("result"+filename,'w+') as f:
+			json.dump(result,f)
 	return result
+
+def sparseSubspaceClustering(X,filename,zeroThreshold=1e-10,aprxInf=9e+4):
+	# C = constructSR(X,zeroThreshold,aprxInf)
+	# with open("SR_"+filename,'w+') as f:
+	# 	json.dump(C,f)
+	# result = spectralClustering(constructAffinityGraph(C))
+	# with open("result"+filename,'w+') as f:
+	# 	json.dump(result,f)
+	# return result
+	return fastSSC(X,filename,numThreads=16,zeroThreshold=1e-10,aprxInf=9e+4,write=True)
 
 def subSampling(S,T=set()):
 	if len(S) <= 3:
@@ -113,8 +159,9 @@ def ensembleSparseSubspaceClustering(X,filename,zeroThreshold=1e-10,aprxInf=9e+4
 	A = dict()
 	numSubSample = len(subSamples)
 	for subsample in subSamples:
-		C = constructSR(X[subsample],zeroThreshold,aprxInf)
-		result = spectralClustering(constructAffinityGraph(C))
+		# C = constructSR(X[subsample],zeroThreshold,aprxInf)
+		# result = spectralClustering(constructAffinityGraph(C))
+		result = fastSSC(X,filename,numThreads=16,zeroThreshold=1e-10,aprxInf=9e+4,write=False)
 		for i in xrange(len(result)):
 			for j in xrange(i+1,len(result)):
 				if result[i] == result[j]:
@@ -137,6 +184,7 @@ if __name__ == "__main__":
 	X = normalize(X,axis=1)
 	ensembleSparseSubspaceClustering(X,filename,zeroThreshold=1e-10,aprxInf=9e+4)
 	sparseSubspaceClustering(X,filename,zeroThreshold=1e-10,aprxInf=9e+4)
+
 	filename = "trial5"
 	X = parseCMUMotionData(filename)
 	X = np.array(X)
