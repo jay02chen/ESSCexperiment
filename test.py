@@ -66,7 +66,7 @@ def constructSR(X,zeroThreshold=1e-10,aprxInf=3e+2):
 def constructAffinityGraph(C):
 	G = nx.Graph()
 	for i in xrange(len(C)):
-		for j in xrange(i,len(C)):
+		for j in xrange(i+1,len(C)):
 			G.add_edge(i,j,weight=abs(C[i][j])+abs(C[j][i]))
 	return G
 
@@ -94,6 +94,7 @@ def sparseSubspaceClustering(X,filename,zeroThreshold=1e-10,aprxInf=3e+2):
 	result = spectralClustering(constructAffinityGraph(C))
 	with open("result"+filename,'w+') as f:
 		json.dump(result,f)
+	return result
 
 def subSampling(S,T=set()):
 	if len(S) <= 3:
@@ -107,6 +108,28 @@ def subSampling(S,T=set()):
 	R.extend(subSampling(S0,S2))
 	R.extend(subSampling(S0,S3))
 	return R
+
+def ensembleSparseSubspaceClustering(X,filename,zeroThreshold=1e-10,aprxInf=3e+2):
+	subSamples = subSampling(range(len(X)))
+	A = dict()
+	numSubSample = len(subSamples)
+	for subsample in subSamples:
+		C = constructSR(subsample,zeroThreshold,aprxInf)
+		result = spectralClustering(constructAffinityGraph(C))
+		for i in xrange(len(result)):
+			for j in xrange(i+1,len(result)):
+				if result[i] == result[j]:
+					if (i,j) not in A:
+						A[i,j] = 1
+					else: A[i][j] = A[i][j] + 1
+	G = nx.Graph()
+	for edge in A:
+		if A[edge]*2 > numSubSample:  		#majority voting
+			G.add_edge(edge[0],edge[1])
+	result = spectralClustering(G)
+	with open("Ensenble_result"+filename,'w+') as f:
+		json.dump(result,f)
+	return result
 
 if __name__ == "__main__":
 	filename = sys.argv[1]
