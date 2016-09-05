@@ -136,24 +136,21 @@ def constructSR(X,zeroThreshold=1e-7,aprxInf=9e+4):
 	This function will find the Sparse Representation for each instance sequentially,
 	and then return C = [c_1, c_2, c_3, ...]
 	"""
-	C = []
+	C = np.zeros((len(X),len(X)))
 	for n in xrange(len(X)):
 		A = X
 		A = np.delete(A,n,axis=0)
 		w = solveL1NormWithRelaxation(matrix(A).T*aprxInf,matrix(X[n])*aprxInf)# Approximate to the l1-norm minimization with equality constraint
 		lambd = np.sqrt(2*np.sum(np.abs(np.array(w))))  # Estimate the dimension of subspace and find a proper lambda
 		w = solveL1NormWithRelaxation(matrix(A).T*lambd,matrix(X[n])*lambd)
-		c = np.zeros(len(X))
 		for i in xrange(n):
 			if abs(w[i]) > zeroThreshold:
-				c[i] = w[i]
+				C[n][i] = w[i]
 		for i in xrange(n,len(w)):
 			if abs(w[i]) > zeroThreshold:
-				c[i+1] = w[i]
+				C[n][i+1] = w[i]
 		print n,(2*lambd**2)**2  #print index and dimension of subspace
-
-		C.append(c.tolist())
-	return C
+	return C.tolist()
 def constructAffinityGraph(C):
 	"""
 	Given Sparse Representation matrix,
