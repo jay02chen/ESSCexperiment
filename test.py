@@ -342,14 +342,14 @@ if __name__ == "__main__":
 	
 	file = sys.argv[1]
 	dire = sys.argv[2]
-	rbegin = int(sys.argv[3])
-	rend = rbegin + 5
-	# rend = int(sys.argv[4])
-	X = parseCMUMotionData(file)
-	# with open(file,'r') as f:
-	# 	X = json.load(f)
-	# 	y = X[1]
-	# 	X = X[0]
+	# rbegin = int(sys.argv[3])
+	# rend = rbegin + 5
+
+	# X = parseCMUMotionData(file)
+	with open(file,'r') as f:
+		X = json.load(f)
+		y = X[1]
+		X = X[0]
 
 	X = np.array(X)
 	X = normalize(X,axis=1)
@@ -364,7 +364,6 @@ if __name__ == "__main__":
 			continue
 		subsample = subSamples[i]
 		print i,rend,len(subSamples),len(subsample)
-		# Y = np.array([X[j] for j in subsample])
 		C = constructSR(X[subsample],zeroThreshold=1e-12,aprxInf=9e+4)
 		with open(dire+str(i),'w+') as f:
 			json.dump(C,f)
@@ -390,6 +389,12 @@ if __name__ == "__main__":
 	"""
 	X,y = syntheticGenerator(n=100,d=[2,3,2],N=[180,200,600],sigma=0.1)
 	filename = "s2dat"
+	with open(filename,'w+') as f:
+		json.dump([X.tolist(),y.tolist()],f)
+	"""
+	"""
+	X,y = syntheticGenerator(n=100,d=[2,3,2],N=[50,90,0],sigma=0.1)
+	filename = "s3dat"
 	with open(filename,'w+') as f:
 		json.dump([X.tolist(),y.tolist()],f)
 	"""
