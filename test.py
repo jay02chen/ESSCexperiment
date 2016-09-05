@@ -342,8 +342,8 @@ if __name__ == "__main__":
 	
 	file = sys.argv[1]
 	dire = sys.argv[2]
-	# rbegin = int(sys.argv[3])
-	# rend = rbegin + 5
+	rbegin = 0
+	rend = -1
 
 	# X = parseCMUMotionData(file)
 	with open(file,'r') as f:
