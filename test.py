@@ -342,11 +342,11 @@ if __name__ == "__main__":
 	dire = sys.argv[2]
 	rbegin = int(sys.argv[3])
 	rend = int(sys.argv[4])
-	# X = parseCMUMotionData(file)
-	with open(file,'r') as f:
-		X = json.load(f)
-	y = X[1]
-	X = X[0]
+	X = parseCMUMotionData(file)
+	# with open(file,'r') as f:
+	# 	X = json.load(f)
+	# y = X[1]
+	# X = X[0]
 
 	X = np.array(X)
 	X = normalize(X,axis=1)
