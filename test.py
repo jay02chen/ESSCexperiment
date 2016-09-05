@@ -5,6 +5,7 @@ import json
 import networkx as nx
 import sys
 import io
+import os
 import threading
 import time
 from l1regls import l1regls
@@ -108,7 +109,7 @@ def solveL1NormExactly(A,b):
 	h = np.hstack((b,-b,np.zeros((X.shape[1]*2))))
 	return linprog(c,G,h)
 
-def constructSR(X,zeroThreshold=1e-7,aprxInf=9e+4):
+def constructSR(X,zeroThreshold=1e-12,aprxInf=9e+4):
 	"""
 	First solve 
 
@@ -181,10 +182,11 @@ def spectralClustering(G):
 	
 	v = [v[w[i][1]] for i in xrange(idx)]
 	km = KMeans(idx)
+	v = sklearn.preprocessing.normalize(v,axis=1)
 	result = km.fit_predict(np.array(v).T)
 	return result.tolist()
 
-def fastSSC(X,filename="",numThreads=16,zeroThreshold=1e-7,aprxInf=9e+4,write=False):
+def fastSSC(X,filename="",numThreads=16,zeroThreshold=1e-12,aprxInf=9e+4,write=False):
 	"""
 	perform
 		constructSR() -> constructAffinityGraph() -> spectralClustering()
@@ -237,7 +239,7 @@ def fastSSC(X,filename="",numThreads=16,zeroThreshold=1e-7,aprxInf=9e+4,write=Fa
 			json.dump(result,f)
 	return result
 
-def sparseSubspaceClustering(X,filename="",numThreads=1,zeroThreshold=1e-7,aprxInf=9e+4):
+def sparseSubspaceClustering(X,filename="",numThreads=1,zeroThreshold=1e-12,aprxInf=9e+4):
 	"""
 	The original sparse subspace clustering proposed in 
 	(Ehsan Elhamifar, et al. Sparse Subspace Clustering, 2009)
@@ -247,7 +249,7 @@ def sparseSubspaceClustering(X,filename="",numThreads=1,zeroThreshold=1e-7,aprxI
 		III. 	apply spectral clustering on the affinity matrix
 	"""
 	if numThreads > 1:
-		return fastSSC(X,filename,numThreads=16,zeroThreshold=1e-7,aprxInf=9e+4,write=True)
+		return fastSSC(X,filename,numThreads=16,zeroThreshold=1e-12,aprxInf=9e+4,write=True)
 	else:
 		C = constructSR(X,zeroThreshold,aprxInf)
 		if filename != "":
@@ -278,7 +280,7 @@ def subSampling(S,T=set()):
 	R.extend(subSampling(S0,S3))
 	return R
 
-def ensembleSparseSubspaceClustering(X,filename="",numThreads=16,zeroThreshold=1e-7,aprxInf=9e+4):
+def ensembleSparseSubspaceClustering(X,filename="",numThreads=16,zeroThreshold=1e-12,aprxInf=9e+4):
 	"""
 	The method proposed in our work.
 	First construct subsamples according to 
@@ -293,7 +295,7 @@ def ensembleSparseSubspaceClustering(X,filename="",numThreads=16,zeroThreshold=1
 	numSubSample = len(subSamples)
 	for subsample in subSamples:
 		if numThreads > 1:
-			result = fastSSC(X[subsample],filename,numThreads=16,zeroThreshold=1e-7,aprxInf=9e+4,write=False)
+			result = fastSSC(X[subsample],filename,numThreads=16,zeroThreshold=1e-12,aprxInf=9e+4,write=False)
 		else: result = spectralClustering(constructAffinityGraph(constructSR(X[subsample],zeroThreshold,aprxInf)))
 		for i in xrange(len(result)):
 			for j in xrange(i+1,len(result)):
@@ -326,7 +328,7 @@ def evaluate(a,b):
 			if (a[i]==a[j] and b[i]!=b[j]) or (a[i]!=a[j] and b[i]==b[j]):
 				error = error + 1
 	return error,num
-def countNonzero(v,zeroThreshold=1e-7):
+def countNonzero(v,zeroThreshold=1e-12):
 	"""
 	Count the number of non-zero components of the vector v
 	"""
@@ -341,12 +343,13 @@ if __name__ == "__main__":
 	file = sys.argv[1]
 	dire = sys.argv[2]
 	rbegin = int(sys.argv[3])
-	rend = int(sys.argv[4])
+	rend = rbegin + 5
+	# rend = int(sys.argv[4])
 	X = parseCMUMotionData(file)
 	# with open(file,'r') as f:
 	# 	X = json.load(f)
-	# y = X[1]
-	# X = X[0]
+	# 	y = X[1]
+	# 	X = X[0]
 
 	X = np.array(X)
 	X = normalize(X,axis=1)
@@ -357,19 +360,22 @@ if __name__ == "__main__":
 		print len(subSamples)
 		rend = rbegin
 	for i in xrange(rbegin,rend):
+		if os.path.exists(dire+str(i)):
+			continue
 		subsample = subSamples[i]
 		print i,rend,len(subSamples),len(subsample)
 		# Y = np.array([X[j] for j in subsample])
-		C = constructSR(X[subsample],zeroThreshold=1e-7,aprxInf=9e+4)
+		C = constructSR(X[subsample],zeroThreshold=1e-12,aprxInf=9e+4)
 		with open(dire+str(i),'w+') as f:
 			json.dump(C,f)
+		C = None
 
 	# filename = sys.argv[1]
 	# X = parseCMUMotionData(filename)
 	# X = np.array(X)
 	# X = normalize(X,axis=1)
-	# ensembleSparseSubspaceClustering(X,filename,numThreads=1,zeroThreshold=1e-7,aprxInf=9e+4)
-	# sparseSubspaceClustering(X,filename,numThreads=1,zeroThreshold=1e-7,aprxInf=9e+4)
+	# ensembleSparseSubspaceClustering(X,filename,numThreads=1,zeroThreshold=1e-12,aprxInf=9e+4)
+	# sparseSubspaceClustering(X,filename,numThreads=1,zeroThreshold=1e-12,aprxInf=9e+4)
 	
 	"""Synthetic 1
 	X,y = syntheticGenerator(n=100,d=[2,3],N=[1000,3000],sigma=0.1)
