@@ -1,6 +1,3 @@
-"""
-COPYRIGHT
-"""
 import numpy as np
 import scipy
 import sklearn
@@ -111,7 +108,7 @@ def solveL1NormExactly(A,b):
 	h = np.hstack((b,-b,np.zeros((X.shape[1]*2))))
 	return linprog(c,G,h)
 
-def constructSR(X,zeroThreshold=1e-8,aprxInf=9e+4):
+def constructSR(X,zeroThreshold=1e-7,aprxInf=9e+4):
 	"""
 	First solve 
 
@@ -146,10 +143,16 @@ def constructSR(X,zeroThreshold=1e-8,aprxInf=9e+4):
 		w = solveL1NormWithRelaxation(matrix(A).T*aprxInf,matrix(X[n])*aprxInf)# Approximate to the l1-norm minimization with equality constraint
 		lambd = np.sqrt(2*np.sum(np.abs(np.array(w))))  # Estimate the dimension of subspace and find a proper lambda
 		w = solveL1NormWithRelaxation(matrix(A).T*lambd,matrix(X[n])*lambd)
-		c = [max(np.sign(abs(s)-zeroThreshold)*s,0) for s in w]
+		c = np.zeros(len(X))
+		for i in xrange(n):
+			if abs(w[i]) > zeroThreshold:
+				c[i] = w[i]
+		for i in xrange(n,len(w)):
+			if abs(w[i]) > zeroThreshold:
+				c[i+1] = w[i]
 		print n,(2*lambd**2)**2  #print index and dimension of subspace
-		c.insert(n,0)
-		C.append(c)
+
+		C.append(c.tolist())
 	return C
 def constructAffinityGraph(C):
 	"""
@@ -184,7 +187,7 @@ def spectralClustering(G):
 	result = km.fit_predict(np.array(v).T)
 	return result.tolist()
 
-def fastSSC(X,filename="",numThreads=16,zeroThreshold=1e-8,aprxInf=9e+4,write=False):
+def fastSSC(X,filename="",numThreads=16,zeroThreshold=1e-7,aprxInf=9e+4,write=False):
 	"""
 	perform
 		constructSR() -> constructAffinityGraph() -> spectralClustering()
@@ -237,7 +240,7 @@ def fastSSC(X,filename="",numThreads=16,zeroThreshold=1e-8,aprxInf=9e+4,write=Fa
 			json.dump(result,f)
 	return result
 
-def sparseSubspaceClustering(X,filename="",numThreads=1,zeroThreshold=1e-8,aprxInf=9e+4):
+def sparseSubspaceClustering(X,filename="",numThreads=1,zeroThreshold=1e-7,aprxInf=9e+4):
 	"""
 	The original sparse subspace clustering proposed in 
 	(Ehsan Elhamifar, et al. Sparse Subspace Clustering, 2009)
@@ -247,7 +250,7 @@ def sparseSubspaceClustering(X,filename="",numThreads=1,zeroThreshold=1e-8,aprxI
 		III. 	apply spectral clustering on the affinity matrix
 	"""
 	if numThreads > 1:
-		return fastSSC(X,filename,numThreads=16,zeroThreshold=1e-8,aprxInf=9e+4,write=True)
+		return fastSSC(X,filename,numThreads=16,zeroThreshold=1e-7,aprxInf=9e+4,write=True)
 	else:
 		C = constructSR(X,zeroThreshold,aprxInf)
 		if filename != "":
@@ -265,6 +268,7 @@ def subSampling(S,T=set()):
 	Construct subsample according to 
 	(Steve Hanneke. The Optimal Sample Complexity of PAC Learning, 2016)
 	"""
+	S = set(S)
 	if len(S) <= 3:
 		return [list(S.union(T))]
 	size = len(S)/4
@@ -277,7 +281,7 @@ def subSampling(S,T=set()):
 	R.extend(subSampling(S0,S3))
 	return R
 
-def ensembleSparseSubspaceClustering(X,filename="",numThreads=16,zeroThreshold=1e-8,aprxInf=9e+4):
+def ensembleSparseSubspaceClustering(X,filename="",numThreads=16,zeroThreshold=1e-7,aprxInf=9e+4):
 	"""
 	The method proposed in our work.
 	First construct subsamples according to 
@@ -292,7 +296,7 @@ def ensembleSparseSubspaceClustering(X,filename="",numThreads=16,zeroThreshold=1
 	numSubSample = len(subSamples)
 	for subsample in subSamples:
 		if numThreads > 1:
-			result = fastSSC(X[subsample],filename,numThreads=16,zeroThreshold=1e-8,aprxInf=9e+4,write=False)
+			result = fastSSC(X[subsample],filename,numThreads=16,zeroThreshold=1e-7,aprxInf=9e+4,write=False)
 		else: result = spectralClustering(constructAffinityGraph(constructSR(X[subsample],zeroThreshold,aprxInf)))
 		for i in xrange(len(result)):
 			for j in xrange(i+1,len(result)):
@@ -325,6 +329,15 @@ def evaluate(a,b):
 			if (a[i]==a[j] and b[i]!=b[j]) or (a[i]!=a[j] and b[i]==b[j]):
 				error = error + 1
 	return error,num
+def countNonzero(v,zeroThreshold=1e-7):
+	"""
+	Count the number of non-zero components of the vector v
+	"""
+	s = 0
+	for e in v:
+		if abs(e) > zeroThreshold:
+			s = s + 1
+	return s
 
 if __name__ == "__main__":
 	
@@ -332,11 +345,12 @@ if __name__ == "__main__":
 	dire = sys.argv[2]
 	rbegin = int(sys.argv[3])
 	rend = int(sys.argv[4])
-	X = parseCMUMotionData(file)
-	# with open(file,'r') as f:
-		# X = json.load(f)
-	# y = X[1]
-	# X = X[0]
+	# X = parseCMUMotionData(file)
+	with open(file,'r') as f:
+		X = json.load(f)
+	y = X[1]
+	X = X[0]
+
 	X = np.array(X)
 	X = normalize(X,axis=1)
 	subSamples = subSampling(range(len(X)))
@@ -348,7 +362,8 @@ if __name__ == "__main__":
 	for i in xrange(rbegin,rend):
 		subsample = subSamples[i]
 		print i,rend,len(subSamples),len(subsample)
-		C = constructSR(X[subsample],zeroThreshold=1e-8,aprxInf=9e+4)
+		# Y = np.array([X[j] for j in subsample])
+		C = constructSR(X[subsample],zeroThreshold=1e-7,aprxInf=9e+4)
 		with open(dire+str(i),'w+') as f:
 			json.dump(C,f)
 
@@ -356,17 +371,24 @@ if __name__ == "__main__":
 	# X = parseCMUMotionData(filename)
 	# X = np.array(X)
 	# X = normalize(X,axis=1)
-	# ensembleSparseSubspaceClustering(X,filename,numThreads=1,zeroThreshold=1e-8,aprxInf=9e+4)
-	# sparseSubspaceClustering(X,filename,numThreads=1,zeroThreshold=1e-8,aprxInf=9e+4)
+	# ensembleSparseSubspaceClustering(X,filename,numThreads=1,zeroThreshold=1e-7,aprxInf=9e+4)
+	# sparseSubspaceClustering(X,filename,numThreads=1,zeroThreshold=1e-7,aprxInf=9e+4)
 	
-	# X,y = syntheticGenerator(n=100,d=[2,3],N=[1000,3000],sigma=0.1)
-	# filename = "synthetic_data"
-	# with open(filename,'w+') as f:
-	# 	json.dump([X.tolist(),y.tolist()],f)
-	# scc_result = sparseSubspaceClustering(X,filename,numThreads=1)
-	# print evaluate(y,scc_result)
-	# ens_result = ensembleSparseSubspaceClustering(X,filename,numThreads=1)
-	# print evaluate(y,ens_result)
-
+	"""Synthetic 1
+	X,y = syntheticGenerator(n=100,d=[2,3],N=[1000,3000],sigma=0.1)
+	filename = "s1dat"
+	with open(filename,'w+') as f:
+		json.dump([X.tolist(),y.tolist()],f)
+	scc_result = sparseSubspaceClustering(X,filename,numThreads=1)
+	print evaluate(y,scc_result)
+	ens_result = ensembleSparseSubspaceClustering(X,filename,numThreads=1)
+	print evaluate(y,ens_result)
+	"""
+	"""
+	X,y = syntheticGenerator(n=100,d=[2,3,2],N=[180,200,600],sigma=0.1)
+	filename = "s2dat"
+	with open(filename,'w+') as f:
+		json.dump([X.tolist(),y.tolist()],f)
+	"""
 
 
