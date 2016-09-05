@@ -338,12 +338,12 @@ def countNonzero(v,zeroThreshold=1e-12):
 			s = s + 1
 	return s
 
-if __name__ == "__main__":
-	
-	file = sys.argv[1]
-	dire = sys.argv[2]
-	rbegin = 0
-	rend = -1
+def runESSCSyn(args):
+	"""
+	run/generate the synthetic data
+	"""
+	file = args[1]
+	dire = args[2]
 
 	# X = parseCMUMotionData(file)
 	with open(file,'r') as f:
@@ -354,29 +354,19 @@ if __name__ == "__main__":
 	X = np.array(X)
 	X = normalize(X,axis=1)
 	subSamples = subSampling(range(len(X)))
-	if rend == -1:
-		rend = len(subSamples)
-	if rend > len(subSamples):
-		print len(subSamples)
-		rend = rbegin
-	for i in xrange(rbegin,rend):
+	for i in xrange(len(subSamples)):
 		if os.path.exists(dire+str(i)):
 			continue
 		subsample = subSamples[i]
-		print i,rend,len(subSamples),len(subsample)
+		print i,len(subSamples),len(subsample)
 		C = constructSR(X[subsample],zeroThreshold=1e-12,aprxInf=9e+4)
 		with open(dire+str(i),'w+') as f:
 			json.dump(C,f)
 		C = None
-
-	# filename = sys.argv[1]
-	# X = parseCMUMotionData(filename)
-	# X = np.array(X)
-	# X = normalize(X,axis=1)
-	# ensembleSparseSubspaceClustering(X,filename,numThreads=1,zeroThreshold=1e-12,aprxInf=9e+4)
-	# sparseSubspaceClustering(X,filename,numThreads=1,zeroThreshold=1e-12,aprxInf=9e+4)
-	
-	"""Synthetic 1
+	###########################
+	##Generate Synthetic Data##
+	###########################
+	"""#Synthetic 1
 	X,y = syntheticGenerator(n=100,d=[2,3],N=[1000,3000],sigma=0.1)
 	filename = "s1dat"
 	with open(filename,'w+') as f:
@@ -386,17 +376,156 @@ if __name__ == "__main__":
 	ens_result = ensembleSparseSubspaceClustering(X,filename,numThreads=1)
 	print evaluate(y,ens_result)
 	"""
-	"""
+	"""#Synthetic 2
 	X,y = syntheticGenerator(n=100,d=[2,3,2],N=[180,200,600],sigma=0.1)
 	filename = "s2dat"
 	with open(filename,'w+') as f:
 		json.dump([X.tolist(),y.tolist()],f)
 	"""
-	"""
-	X,y = syntheticGenerator(n=100,d=[2,3,2],N=[50,90,0],sigma=0.1)
+	"""#Synthetic 3
+	X,y = syntheticGenerator(n=100,d=[2,3,2],N=[50,90,450],sigma=0.1)
 	filename = "s3dat"
 	with open(filename,'w+') as f:
 		json.dump([X.tolist(),y.tolist()],f)
 	"""
+	"""#Synthetic 4
+	X,y = syntheticGenerator(n=10,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=0.01)
+	filename = "s4dat"
+	with open(filename,'w+') as f:
+		json.dump([X.tolist(),y.tolist()],f)
+	"""
+	"""#Synthetic 5
+	X,y = syntheticGenerator(n=10,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=0.1)
+	filename = "s5dat"
+	with open(filename,'w+') as f:
+		json.dump([X.tolist(),y.tolist()],f)
+	"""
+	"""#Synthetic 6
+	X,y = syntheticGenerator(n=10,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=0.3)
+	filename = "s6dat"
+	with open(filename,'w+') as f:
+		json.dump([X.tolist(),y.tolist()],f)
+	"""
+	"""#Synthetic 7
+	X,y = syntheticGenerator(n=10,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=0.5)
+	filename = "s7dat"
+	with open(filename,'w+') as f:
+		json.dump([X.tolist(),y.tolist()],f)
+	"""
+	"""#Synthetic 8
+	X,y = syntheticGenerator(n=10,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=0.8)
+	filename = "s8dat"
+	with open(filename,'w+') as f:
+		json.dump([X.tolist(),y.tolist()],f)
+	"""
+	"""#Synthetic 9
+	X,y = syntheticGenerator(n=10,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=1.0)
+	filename = "s9dat"
+	with open(filename,'w+') as f:
+		json.dump([X.tolist(),y.tolist()],f)
+	"""
+	"""#Synthetic 10
+	X,y = syntheticGenerator(n=50,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=0.01)
+	filename = "s10dat"
+	with open(filename,'w+') as f:
+		json.dump([X.tolist(),y.tolist()],f)
+	"""
+	"""#Synthetic 11
+	X,y = syntheticGenerator(n=50,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=0.1)
+	filename = "s11dat"
+	with open(filename,'w+') as f:
+		json.dump([X.tolist(),y.tolist()],f)
+	"""
+	"""#Synthetic 12
+	X,y = syntheticGenerator(n=50,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=0.3)
+	filename = "s12dat"
+	with open(filename,'w+') as f:
+		json.dump([X.tolist(),y.tolist()],f)
+	"""
+	"""#Synthetic 13
+	X,y = syntheticGenerator(n=50,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=0.5)
+	filename = "s13dat"
+	with open(filename,'w+') as f:
+		json.dump([X.tolist(),y.tolist()],f)
+	"""
+	"""#Synthetic 14
+	X,y = syntheticGenerator(n=50,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=0.8)
+	filename = "s14dat"
+	with open(filename,'w+') as f:
+		json.dump([X.tolist(),y.tolist()],f)
+	"""
+	"""#Synthetic 15
+	X,y = syntheticGenerator(n=50,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=1.0)
+	filename = "s15dat"
+	with open(filename,'w+') as f:
+		json.dump([X.tolist(),y.tolist()],f)
+	"""
+
+def runESSCReal(args,reduct=True):
+	#"""
+	file = args[1]
+	dire = args[2]
+	if len(args) > 3:
+		rbegin = int(args[3])
+	else: rbegin = 0
+	if len(args) > 4:
+		rend = int(args[4])
+	elif len(args) == 4: 
+		rend = rbegin + 5
+	else: rend = -1
+	if reduct:
+		with open(file,'r') as f:
+			X = json.load(f)
+	else: X = parseCMUMotionData(file)
+	X = np.array(X)
+	X = normalize(X,axis=1)
+	print X.shape
+	subSamples = subSampling(range(len(X)))
+	if rend < rbegin or rend > len(subSamples) or rbegin < 0:
+		rbegin = 0
+		rend = len(subSamples)
+	for i in xrange(rbegin,rend):
+		if os.path.exists(dire+str(i)):
+			continue
+		subsample = subSamples[i]
+		print i,rend,len(subSamples),len(subsample)
+		C = constructSR(X[subsample],zeroThreshold=1e-12,aprxInf=9e+4)
+		with open(dire+str(i),'w+') as f:
+			json.dump(C,f)
+		C = None
+	#"""
+	##########################
+	##Apply PCA to real data##
+	##########################
+	""" #dimension reduction by PCA
+	file = sys.argv[1]
+	rfile = sys.argv[2]
+	X = parseCMUMotionData(file)
+	X = np.array(X)
+	X = normalize(X,axis=1)
+	w,v=scipy.linalg.eig(X.dot(X.T))
+	w = sorted(w,reverse=True)
+	idx = 0
+	for i in xrange(0,len(w)):
+		if w[0]/w[i] > 1e+4:
+			idx = i
+			break
+	print idx
+	
+	pca = PCA(n_components=idx)
+	Y = pca.fit_transform(X)
+	with open(rfile,'w+') as f:
+		json.dump(Y.tolist(),f)
+	"""
+def experimentOnC(args):
+	ensembleSparseSubspaceClustering(X,filename,numThreads=1,zeroThreshold=1e-12,aprxInf=9e+4)
+	sparseSubspaceClustering(X,filename,numThreads=1,zeroThreshold=1e-12,aprxInf=9e+4)
+
+if __name__ == "__main__":
+	#runESSCSyn(sys.argv)
+	runESSCReal(sys.argv,reduct=True)
+	
+
+
 
 
