@@ -12,6 +12,7 @@ from l1regls import l1regls
 from sklearn.preprocessing import normalize
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
+from scipy.sparse.csgraph import laplacian
 from cvxopt import matrix
 from networkx.readwrite import json_graph
 
@@ -152,6 +153,13 @@ def constructSR(X,zeroThreshold=1e-12,aprxInf=9e+4):
 				C[n][i+1] = w[i]
 		print n,(2*lambd**2)**2  #print index and dimension of subspace
 	return C.tolist()
+def getLaplacian(C):
+	"""
+	Compute laplacian of C directly without constructing networkx graph object
+	"""
+	C = np.abs(np.array(C))
+	C = C.T+C
+	return laplacian(C)
 def constructAffinityGraph(C):
 	"""
 	Given Sparse Representation matrix,
@@ -170,6 +178,27 @@ def spectralClustering(G):
 	This function will return each subspace label for each instance in the form of list.
 	"""
 	L = nx.laplacian_matrix(G).todense()
+	w,v = scipy.linalg.eig(L)
+	v = v.T
+	w = sorted([(w[i],i) for i in xrange(len(w))],key=lambda x : x[0])
+	maxgap = 0
+	idx = 0
+	for i in xrange(1,len(w)):
+		if maxgap < w[i][0] - w[i-1][0]:
+			maxgap = w[i][0] - w[i-1][0]
+			idx = i
+	
+	v = [v[w[i][1]] for i in xrange(idx)]
+	km = KMeans(idx)
+	v = sklearn.preprocessing.normalize(v,axis=1)
+	result = km.fit_predict(np.array(v).T)
+	return result.tolist()
+def spectralClusteringWithL(L):
+	"""
+	perform spectral clustering on the laplacian of Sparse Representation.
+	The input is the Laplacian matrix constructed by Sparse Representation.
+	This function will return each subspace label for each instance in the form of list.
+	"""
 	w,v = scipy.linalg.eig(L)
 	v = v.T
 	w = sorted([(w[i],i) for i in xrange(len(w))],key=lambda x : x[0])
@@ -302,7 +331,7 @@ def ensembleSparseSubspaceClustering(X,filename="",numThreads=16,zeroThreshold=1
 				if result[i] == result[j]:
 					if (i,j) not in A:
 						A[i,j] = 1
-					else: A[i][j] = A[i][j] + 1
+					else: A[i,j] = A[i,j] + 1
 	G = nx.Graph()
 	for edge in A:
 		if A[edge]*2 > numSubSample:  		#majority voting
@@ -557,15 +586,78 @@ def CMUs86t5Label():
 	for i in xrange(6648,7252): #chopping, sec 55~60
 		benchmark[i] = 8
 	for i in xrange(7252,8340): #walking, sec 60~69
+		benchmark[i] = 0
 	return benchmark
+
 def experimentOnC(args):
 	ensembleSparseSubspaceClustering(X,filename,numThreads=1,zeroThreshold=1e-12,aprxInf=9e+4)
 	sparseSubspaceClustering(X,filename,numThreads=1,zeroThreshold=1e-12,aprxInf=9e+4)
 
+def compareESSCnSSCwithC(args):
+	file = args[1]
+	dire = args[2]
+	SRfile = "SR_"+file
+	with open(file,'r') as f:
+		X = json.load(f)
+		y = X[1]
+		X = X[0]
+
+	X = np.array(X)
+	X = normalize(X,axis=1)
+	subSamples = subSampling(range(len(X)))
+	A = dict()
+	Weight = dict()
+	for i in xrange(len(subSamples)):
+		subsample = subSamples[i]
+		if os.path.exists(dire+str(i)):
+			with open(dire+str(i),'r') as f:
+				C = json.load(f)
+		else: C = constructSR(X[subsample],zeroThreshold=1e-12,aprxInf=9e+4)
+		print i,len(subSamples),len(subsample)
+		result = spectralClusteringWithL(getLaplacian(C))
+		C = None
+		for i in xrange(len(result)):
+			for j in xrange(i+1,len(result)):
+				if result[i] == result[j]:
+					if (i,j) not in A:
+						A[i,j] = 1
+					else: A[i,j] = A[i,j] + 1
+				if (i,j) not in Weight:
+					Weight[i,j] = 1
+				else: Weight[i,j] = Weight[i,j] + 1
+	G = nx.Graph()
+	for edge in A:
+		if A[edge]*2 > Weight[edge]:  		#majority voting
+			G.add_edge(edge[0],edge[1])
+	A = None
+	ESSCresult = spectralClustering(G)
+	if os.path.exists(SRfile):
+		with open(SRfile,'r') as f:
+			C = json.load(f)
+	else:
+		with open(infile,'r') as f:
+			X = json.load(f)
+			y = X[1]
+			X = X[0]
+		X = np.array(X)
+		X = normalize(X,axis=1)
+		C = constructSR(X,zeroThreshold=1e-12,aprxInf=9e+4)
+	SSCresult = spectralClusteringWithL(getLaplacian(C))
+	#SSCresult = spectralClustering(constructAffinityGraph(C))
+	with open("SSCres_"+file,'w+') as f:
+		json.dump(SSCresult,f)
+	with open("ESSCres_"+file,'w+') as f:
+		json.dump(ESSCresult,f)
+	print SSCresult,ESSCresult,
+	print "SSC",evaluate(y,SSCresult)
+	print "ESSC",evaluate(y,ESSCresult)
+
+
 if __name__ == "__main__":
 	#runESSCSyn(sys.argv)
 	#runESSCReal(sys.argv,reduct=True)
-	runSSCSyn(sys.argv)
+	#runSSCSyn(sys.argv)
+	compareESSCnSSCwithC(sys.argv)
 
 
 
