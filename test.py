@@ -460,7 +460,20 @@ def runESSCSyn(args):
 	with open(filename,'w+') as f:
 		json.dump([X.tolist(),y.tolist()],f)
 	"""
-
+def runSSCSyn(args):
+	for i in xrange(4,16):
+		infile = "s"+str(i)+"dat"
+		outfile = "SR_"+infile
+		with open(infile,'r') as f:
+			X = json.load(f)
+			y = X[1]
+			X = X[0]
+		X = np.array(X)
+		X = normalize(X,axis=1)
+		C = constructSR(X,zeroThreshold=1e-12,aprxInf=9e+4)
+		with open(outfile,'w+') as f:
+			json.dump(C,f)
+		C = None
 def runESSCReal(args,reduct=True):
 	#"""
 	file = args[1]
@@ -551,8 +564,8 @@ def experimentOnC(args):
 
 if __name__ == "__main__":
 	#runESSCSyn(sys.argv)
-	runESSCReal(sys.argv,reduct=True)
-	
+	#runESSCReal(sys.argv,reduct=True)
+	runSSCSyn(sys.argv)
 
 
 
