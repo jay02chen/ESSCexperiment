@@ -517,6 +517,34 @@ def runESSCReal(args,reduct=True):
 	with open(rfile,'w+') as f:
 		json.dump(Y.tolist(),f)
 	"""
+def CMUs86t5Label():
+	"""
+	CMU Motion Capture Data subject 86, trial 5.
+	There are 9 different activities.
+	"""
+	benchmark = [0 for i in xrange(8340)]
+	for i in xrange(0,725): #walking,  sec 0~6
+		benchmark[i] = 0
+	for i in xrange(725,1571): #jumping, sec 6~13
+		benchmark[i] = 1
+	for i in xrange(1571,2297): #jumping jacks, sec 13~19
+		benchmark[i] = 2
+	for i in xrange(2297,3263): #frog jumping, sec 19~27
+		benchmark[i] = 3
+	for i in xrange(3263,3989): #jumping on one foot, sec 27~33
+		benchmark[i] = 4
+	for i in xrange(3989,4593): #walking, sec 33~38
+		benchmark[i] = 0
+	for i in xrange(4593,5197): #punching, sec 38~43
+		benchmark[i] = 5
+	for i in xrange(5197,5923): #elbow punching, sec 43~49
+		benchmark[i] = 6
+	for i in xrange(5923,6648): #stretching, sec 49~55
+		benchmark[i] = 7
+	for i in xrange(6648,7252): #chopping, sec 55~60
+		benchmark[i] = 8
+	for i in xrange(7252,8340): #walking, sec 60~69
+	return benchmark
 def experimentOnC(args):
 	ensembleSparseSubspaceClustering(X,filename,numThreads=1,zeroThreshold=1e-12,aprxInf=9e+4)
 	sparseSubspaceClustering(X,filename,numThreads=1,zeroThreshold=1e-12,aprxInf=9e+4)
