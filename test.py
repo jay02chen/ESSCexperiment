@@ -27,20 +27,22 @@ def syntheticGenerator(n,d,N,sigma):
 	"""
 	X = []
 	label = []
+	Base = []
 	if len(d) != len(N) or len(d) == 0:
 		return None
-	for subspace in xrange(len(N)):
-		dim = d[subspace]
-		Num = N[subspace]
+	for k in xrange(len(N)):
+		dim = d[k]
+		Num = N[k]
 		if dim > n:
 			return None 
 		base = np.random.uniform(0,1,(dim,n))
 		base = sklearn.preprocessing.normalize(base,axis=1)
 		X.extend((np.random.dirichlet(np.ones(dim),Num)).dot(base) + np.random.normal(0,sigma/np.sqrt(n),(Num,n)))
-		label.extend([subspace for i in xrange(Num)])
+		label.extend([k for i in xrange(Num)])
+		Base.append(base.tolist())
 	mapping = np.array([np.array([i,label[i]]) for i in xrange(len(label))])
 	mapping = mapping[np.random.permutation(len(mapping))]
-	return np.array(X)[mapping[:,0]],mapping[:,1]
+	return np.array(X)[mapping[:,0]], mapping[:,1], Base
 """
 (e.g.)
 from test import syntheticGenerator as sg
@@ -327,20 +329,26 @@ def ensembleSparseSubspaceClustering(X,filename="",numThreads=16,zeroThreshold=1
 	"""
 	subSamples = subSampling(range(len(X)))
 	A = dict()
+	Weight = dict()
 	numSubSample = len(subSamples)
 	for subsample in subSamples:
 		if numThreads > 1:
 			result = fastSSC(X[subsample],filename,numThreads=16,zeroThreshold=1e-12,aprxInf=9e+4,write=False)
 		else: result = spectralClustering(constructAffinityGraph(constructSR(X[subsample],zeroThreshold,aprxInf)),K)
-		for i in xrange(len(result)):
-			for j in xrange(i+1,len(result)):
-				if result[i] == result[j]:
-					if (i,j) not in A:
-						A[i,j] = 1
-					else: A[i,j] = A[i,j] + 1
+		for j in xrange(len(result)):
+			for k in xrange(j+1,len(result)):
+				i1 = subsample[j]
+				i2 = subsample[k]
+				if result[i1] == result[i2]:
+					if (i1,i2) not in A:
+						A[i1,i2] = 1
+					else: A[i1,i2] = A[i1,i2] + 1
+				if (i1,i2) not in Weight:
+					Weight[i1,i2] = 1
+				else: Weight[i1,i2] = Weight[i1,i2] + 1
 	G = nx.Graph()
 	for edge in A:
-		if A[edge]*2 > numSubSample:  		#majority voting
+		if A[edge]*2 > Weight[edge]:  		#majority voting
 			G.add_edge(edge[0],edge[1])
 	with open("Ensemble_graph_"+filename,'w+') as f:
 		json.dump(json_graph.node_link_data(G),f)
@@ -377,11 +385,12 @@ def runESSCSyn(args):
 	"""
 	run/generate the synthetic data
 	"""
-	file = args[1]
-	dire = args[2]
+	# """
+	infile = args[1]
+	outdire = args[2]
 
 	# X = parseCMUMotionData(file)
-	with open(file,'r') as f:
+	with open(infile,'r') as f:
 		X = json.load(f)
 		y = X[1]
 		X = X[0]
@@ -390,125 +399,166 @@ def runESSCSyn(args):
 	X = normalize(X,axis=1)
 	subSamples = subSampling(range(len(X)))
 	for i in xrange(len(subSamples)):
-		if os.path.exists(dire+str(i)):
+		if os.path.exists(outdire+str(i)):
 			continue
 		subsample = subSamples[i]
 		print i,len(subSamples),len(subsample)
 		C = constructSR(X[subsample],zeroThreshold=1e-12,aprxInf=9e+4)
-		with open(dire+str(i),'w+') as f:
+		with open(outdire+str(i),'w+') as f:
 			json.dump(C,f)
 		C = None
+	# """
 	###########################
 	##Generate Synthetic Data##
 	###########################
 	"""#Synthetic 1
-	X,y = syntheticGenerator(n=100,d=[2,3],N=[1000,3000],sigma=0.1)
+	X,y,Base = syntheticGenerator(n=100,d=[2,3],N=[1000,3000],sigma=0.1)
 	filename = "s1dat"
 	with open(filename,'w+') as f:
-		json.dump([X.tolist(),y.tolist()],f)
+		json.dump([X.tolist(),y.tolist(),Base],f)
 	scc_result = sparseSubspaceClustering(X,filename,numThreads=1)
 	print evaluate(y,scc_result)
 	ens_result = ensembleSparseSubspaceClustering(X,filename,numThreads=1)
 	print evaluate(y,ens_result)
 	"""
 	"""#Synthetic 2
-	X,y = syntheticGenerator(n=100,d=[2,3,2],N=[180,200,600],sigma=0.1)
+	X,y,Base = syntheticGenerator(n=100,d=[2,3,2],N=[180,200,600],sigma=0.1)
 	filename = "s2dat"
 	with open(filename,'w+') as f:
-		json.dump([X.tolist(),y.tolist()],f)
+		json.dump([X.tolist(),y.tolist(),Base],f)
 	"""
 	"""#Synthetic 3
-	X,y = syntheticGenerator(n=100,d=[2,3,2],N=[50,90,450],sigma=0.1)
+	X,y,Base = syntheticGenerator(n=100,d=[2,3,2],N=[50,90,450],sigma=0.1)
 	filename = "s3dat"
 	with open(filename,'w+') as f:
-		json.dump([X.tolist(),y.tolist()],f)
+		json.dump([X.tolist(),y.tolist(),Base],f)
 	"""
 	"""#Synthetic 4
-	X,y = syntheticGenerator(n=10,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=0.01)
+	X,y,Base = syntheticGenerator(n=10,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=0.01)
 	filename = "s4dat"
 	with open(filename,'w+') as f:
-		json.dump([X.tolist(),y.tolist()],f)
+		json.dump([X.tolist(),y.tolist(),Base],f)
 	"""
 	"""#Synthetic 5
-	X,y = syntheticGenerator(n=10,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=0.1)
+	X,y,Base = syntheticGenerator(n=10,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=0.1)
 	filename = "s5dat"
 	with open(filename,'w+') as f:
-		json.dump([X.tolist(),y.tolist()],f)
+		json.dump([X.tolist(),y.tolist(),Base],f)
 	"""
 	"""#Synthetic 6
-	X,y = syntheticGenerator(n=10,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=0.3)
+	X,y,Base = syntheticGenerator(n=10,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=0.3)
 	filename = "s6dat"
 	with open(filename,'w+') as f:
-		json.dump([X.tolist(),y.tolist()],f)
+		json.dump([X.tolist(),y.tolist(),Base],f)
 	"""
 	"""#Synthetic 7
-	X,y = syntheticGenerator(n=10,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=0.5)
+	X,y,Base = syntheticGenerator(n=10,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=0.5)
 	filename = "s7dat"
 	with open(filename,'w+') as f:
-		json.dump([X.tolist(),y.tolist()],f)
+		json.dump([X.tolist(),y.tolist(),Base],f)
 	"""
 	"""#Synthetic 8
-	X,y = syntheticGenerator(n=10,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=0.8)
+	X,y,Base = syntheticGenerator(n=10,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=0.8)
 	filename = "s8dat"
 	with open(filename,'w+') as f:
-		json.dump([X.tolist(),y.tolist()],f)
+		json.dump([X.tolist(),y.tolist(),Base],f)
 	"""
 	"""#Synthetic 9
-	X,y = syntheticGenerator(n=10,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=1.0)
+	X,y,Base = syntheticGenerator(n=10,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=1.0)
 	filename = "s9dat"
 	with open(filename,'w+') as f:
-		json.dump([X.tolist(),y.tolist()],f)
+		json.dump([X.tolist(),y.tolist(),Base],f)
 	"""
 	"""#Synthetic 10
-	X,y = syntheticGenerator(n=50,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=0.01)
+	X,y,Base = syntheticGenerator(n=50,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=0.01)
 	filename = "s10dat"
 	with open(filename,'w+') as f:
-		json.dump([X.tolist(),y.tolist()],f)
+		json.dump([X.tolist(),y.tolist(),Base],f)
 	"""
 	"""#Synthetic 11
-	X,y = syntheticGenerator(n=50,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=0.1)
+	X,y,Base = syntheticGenerator(n=50,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=0.1)
 	filename = "s11dat"
 	with open(filename,'w+') as f:
-		json.dump([X.tolist(),y.tolist()],f)
+		json.dump([X.tolist(),y.tolist(),Base],f)
 	"""
 	"""#Synthetic 12
-	X,y = syntheticGenerator(n=50,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=0.3)
+	X,y,Base = syntheticGenerator(n=50,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=0.3)
 	filename = "s12dat"
 	with open(filename,'w+') as f:
-		json.dump([X.tolist(),y.tolist()],f)
+		json.dump([X.tolist(),y.tolist(),Base],f)
 	"""
 	"""#Synthetic 13
-	X,y = syntheticGenerator(n=50,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=0.5)
+	X,y,Base = syntheticGenerator(n=50,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=0.5)
 	filename = "s13dat"
 	with open(filename,'w+') as f:
-		json.dump([X.tolist(),y.tolist()],f)
+		json.dump([X.tolist(),y.tolist(),Base],f)
 	"""
 	"""#Synthetic 14
-	X,y = syntheticGenerator(n=50,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=0.8)
+	X,y,Base = syntheticGenerator(n=50,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=0.8)
 	filename = "s14dat"
 	with open(filename,'w+') as f:
-		json.dump([X.tolist(),y.tolist()],f)
+		json.dump([X.tolist(),y.tolist(),Base],f)
 	"""
 	"""#Synthetic 15
-	X,y = syntheticGenerator(n=50,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=1.0)
+	X,y,Base = syntheticGenerator(n=50,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=1.0)
 	filename = "s15dat"
 	with open(filename,'w+') as f:
-		json.dump([X.tolist(),y.tolist()],f)
+		json.dump([X.tolist(),y.tolist(),Base],f)
+	"""
+	"""#Synthetic 16
+	X,y,Base = syntheticGenerator(n=20,d=[2,3,2,6,3,2],N=[40,10,60,30,40,120],sigma=0.01)
+	filename = "s16dat"
+	with open(filename,'w+') as f:
+		json.dump([X.tolist(),y.tolist(),Base],f)
+	"""
+	"""#Synthetic 17
+	X,y,Base = syntheticGenerator(n=20,d=[2,3,2,6,3,2],N=[40,10,60,30,40,120],sigma=0.1)
+	filename = "s17dat"
+	with open(filename,'w+') as f:
+		json.dump([X.tolist(),y.tolist(),Base],f)
+	"""
+	"""#Synthetic 18
+	X,y,Base = syntheticGenerator(n=20,d=[2,3,2,6,3,2],N=[40,10,60,30,40,120],sigma=0.3)
+	filename = "s18dat"
+	with open(filename,'w+') as f:
+		json.dump([X.tolist(),y.tolist(),Base],f)
+	"""
+	"""#Synthetic 19
+	X,y,Base = syntheticGenerator(n=20,d=[2,3,2,6,3,2],N=[40,10,60,30,40,120],sigma=0.5)
+	filename = "s19dat"
+	with open(filename,'w+') as f:
+		json.dump([X.tolist(),y.tolist(),Base],f)
+	"""
+	"""#Synthetic 20
+	X,y,Base = syntheticGenerator(n=20,d=[2,3,2,6,3,2],N=[40,10,60,30,40,120],sigma=0.8)
+	filename = "s20dat"
+	with open(filename,'w+') as f:
+		json.dump([X.tolist(),y.tolist(),Base],f)
+	"""
+	"""#Synthetic 21
+	X,y,Base = syntheticGenerator(n=20,d=[2,3,2,6,3,2],N=[40,10,60,30,40,120],sigma=1.0)
+	filename = "s21dat"
+	with open(filename,'w+') as f:
+		json.dump([X.tolist(),y.tolist(),Base],f)
 	"""
 def runSSCSyn(args):
-	for i in xrange(4,16):
-		infile = "s"+str(i)+"dat"
-		outfile = "SR_"+infile
-		with open(infile,'r') as f:
-			X = json.load(f)
-			y = X[1]
-			X = X[0]
-		X = np.array(X)
-		X = normalize(X,axis=1)
-		C = constructSR(X,zeroThreshold=1e-12,aprxInf=9e+4)
-		with open(outfile,'w+') as f:
-			json.dump(C,f)
-		C = None
+	infile = args[1]
+	# outdire = args[2]
+	# infile = "s"+str(i)+"dat"
+	outfile = "SR_"+infile
+	if os.path.exists(outfile):
+		return False
+	with open(infile,'r') as f:
+		X = json.load(f)
+		y = X[1]
+		X = X[0]
+	X = np.array(X)
+	X = normalize(X,axis=1)
+	C = constructSR(X,zeroThreshold=1e-12,aprxInf=9e+4)
+	with open(outfile,'w+') as f:
+		json.dump(C,f)
+	C = None
+	return True
 def runESSCReal(args,reduct=True):
 	#"""
 	file = args[1]
@@ -608,7 +658,7 @@ def compareESSCnSSCwithC(args):
 		X = json.load(f)
 		y = X[1]
 		X = X[0]
-	K = max(y)+1
+	# K = max(y)+1
 	X = np.array(X)
 	X = normalize(X,axis=1)
 	subSamples = subSampling(range(len(X)))
@@ -623,20 +673,22 @@ def compareESSCnSSCwithC(args):
 		print i,len(subSamples),len(subsample)
 		result = spectralClusteringWithL(getLaplacian(C),K)
 		C = None
-		for i in xrange(len(result)):
-			for j in xrange(i+1,len(result)):
-				if result[i] == result[j]:
-					if (i,j) not in A:
-						A[i,j] = 1
-					else: A[i,j] = A[i,j] + 1
-				if (i,j) not in Weight:
-					Weight[i,j] = 1
-				else: Weight[i,j] = Weight[i,j] + 1
+		for j in xrange(len(result)):
+			for k in xrange(j+1,len(result)):
+				i1 = subsample[j]
+				i2 = subsample[k]
+				if result[i1] == result[i2]:
+					if (i1,i2) not in A:
+						A[i1,i2] = 1
+					else: A[i1,i2] = A[i1,i2] + 1
+				if (i1,i2) not in Weight:
+					Weight[i1,i2] = 1
+				else: Weight[i1,i2] = Weight[i1,i2] + 1
 	G = nx.Graph()
 	for i in xrange(len(X)):
 		G.add_node(i)
 	for edge in A:
-		if A[edge]*2 > Weight[edge]:  		#majority voting
+		if A[edge]*2 >= Weight[edge]:  		#majority voting
 			G.add_edge(edge[0],edge[1])
 	A = None
 	ESSCresult = spectralClustering(G,K)
@@ -657,16 +709,18 @@ def compareESSCnSSCwithC(args):
 		json.dump(SSCresult,f)
 	with open("ESSCres_"+outfile,'w+') as f:
 		json.dump(ESSCresult,f)
-	print SSCresult,ESSCresult,
+	print "SSC",SSCresult
+	print "ESSC",ESSCresult
+	print "Ans",y
 	print "SSC",evaluate(y,SSCresult)
 	print "ESSC",evaluate(y,ESSCresult)
 
 
 if __name__ == "__main__":
-	#runESSCSyn(sys.argv)
-	#runESSCReal(sys.argv,reduct=True)
-	#runSSCSyn(sys.argv)
+	runESSCSyn(sys.argv)
+	runSSCSyn(sys.argv)
 	compareESSCnSSCwithC(sys.argv)
+	#runESSCReal(sys.argv,reduct=True)
 
 
 
