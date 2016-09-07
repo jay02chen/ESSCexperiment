@@ -960,14 +960,22 @@ def mytrial4(args):
 				print ""
 				sscfilename  = sscfilename  + "k"
 				esscfilename = esscfilename + "k"
+		elif os.path.exists("writing_"+filename):
+			continue
 		else:
-			runESSCSyn(argument)
-			runSSCSyn(argument)
+			with open("writing_"+filename,'w+') as f:
+				f.write("%d"%(os.getpid()))
+			with open("writing_"+filename,'r') as f:
+				if int(f.readline()) != os.getpid():
+					continue
+			#runESSCSyn(argument)
+			#runSSCSyn(argument)
 			compareESSCnSSCwithC(argument)
 			argument = ["",filename,subdire,filename+"k","k"]
-			runESSCSyn(argument)
-			runSSCSyn(argument)
+			#runESSCSyn(argument)
+			#runSSCSyn(argument)
 			compareESSCnSSCwithC(argument)
+			os.unlink("writing_"+filename)
 if __name__ == "__main__":
 	args = [s for s in sys.argv]
 	if sys.argv[1] == "mytrial1":
