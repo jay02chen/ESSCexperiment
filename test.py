@@ -171,43 +171,49 @@ def constructAffinityGraph(C):
 			G.add_edge(i,j,weight=abs(C[i][j])+abs(C[j][i]))
 	return G
 
-def spectralClustering(G):
+def spectralClustering(G,K=-1):
 	"""
 	perform spectral clustering on the laplacian of Sparse Representation.
 	The input is the networkx.Graph() object constructed by Sparse Representation.
 	This function will return each subspace label for each instance in the form of list.
+	K is the number of clusters. if not specify, set K = the idx with the largest eigen gap.
 	"""
 	L = nx.laplacian_matrix(G).todense()
 	w,v = scipy.linalg.eig(L)
 	v = v.T
 	w = sorted([(w[i],i) for i in xrange(len(w))],key=lambda x : x[0])
-	maxgap = 0
-	idx = 0
-	for i in xrange(1,len(w)):
-		if maxgap < w[i][0] - w[i-1][0]:
-			maxgap = w[i][0] - w[i-1][0]
-			idx = i
+	if K <= 0:
+		maxgap = 0
+		idx = 0
+		for i in xrange(1,len(w)):
+			if maxgap < w[i][0] - w[i-1][0]:
+				maxgap = w[i][0] - w[i-1][0]
+				idx = i
+	else: idx = K
 	
 	v = [v[w[i][1]] for i in xrange(idx)]
 	km = KMeans(idx)
 	v = sklearn.preprocessing.normalize(v,axis=1)
 	result = km.fit_predict(np.array(v).T)
 	return result.tolist()
-def spectralClusteringWithL(L):
+def spectralClusteringWithL(L,K=-1):
 	"""
 	perform spectral clustering on the laplacian of Sparse Representation.
 	The input is the Laplacian matrix constructed by Sparse Representation.
 	This function will return each subspace label for each instance in the form of list.
+	K is the number of clusters. if not specify, set K = the idx with the largest eigen gap.
 	"""
 	w,v = scipy.linalg.eig(L)
 	v = v.T
 	w = sorted([(w[i],i) for i in xrange(len(w))],key=lambda x : x[0])
-	maxgap = 0
-	idx = 0
-	for i in xrange(1,len(w)):
-		if maxgap < w[i][0] - w[i-1][0]:
-			maxgap = w[i][0] - w[i-1][0]
-			idx = i
+	if K <= 0:
+		maxgap = 0
+		idx = 0
+		for i in xrange(1,len(w)):
+			if maxgap < w[i][0] - w[i-1][0]:
+				maxgap = w[i][0] - w[i-1][0]
+				idx = i
+	else: idx = K
 	
 	v = [v[w[i][1]] for i in xrange(idx)]
 	km = KMeans(idx)
@@ -262,7 +268,7 @@ def fastSSC(X,filename="",numThreads=16,zeroThreshold=1e-12,aprxInf=9e+4,write=F
 	if write and filename != "":
 		with open("SR_"+filename,'w+') as f:
 			json.dump(C.tolist(),f)
-	result = spectralClustering(constructAffinityGraph(C))
+	result = spectralClustering(constructAffinityGraph(C),K)
 	if write and filename != "":
 		with open("result_"+filename,'w+') as f:
 			json.dump(result,f)
@@ -284,7 +290,7 @@ def sparseSubspaceClustering(X,filename="",numThreads=1,zeroThreshold=1e-12,aprx
 		if filename != "":
 			with open("SR_"+filename,'w+') as f:
 				json.dump(C,f)
-		result = spectralClustering(constructAffinityGraph(C))
+		result = spectralClustering(constructAffinityGraph(C),K)
 		if filename != "":
 			with open("result_"+filename,'w+') as f:
 				json.dump(result,f)
@@ -325,7 +331,7 @@ def ensembleSparseSubspaceClustering(X,filename="",numThreads=16,zeroThreshold=1
 	for subsample in subSamples:
 		if numThreads > 1:
 			result = fastSSC(X[subsample],filename,numThreads=16,zeroThreshold=1e-12,aprxInf=9e+4,write=False)
-		else: result = spectralClustering(constructAffinityGraph(constructSR(X[subsample],zeroThreshold,aprxInf)))
+		else: result = spectralClustering(constructAffinityGraph(constructSR(X[subsample],zeroThreshold,aprxInf)),K)
 		for i in xrange(len(result)):
 			for j in xrange(i+1,len(result)):
 				if result[i] == result[j]:
@@ -338,7 +344,7 @@ def ensembleSparseSubspaceClustering(X,filename="",numThreads=16,zeroThreshold=1
 			G.add_edge(edge[0],edge[1])
 	with open("Ensemble_graph_"+filename,'w+') as f:
 		json.dump(json_graph.node_link_data(G),f)
-	result = spectralClustering(G)
+	result = spectralClustering(G,K)
 	with open("Ensemble_result_"+filename,'w+') as f:
 		json.dump(result,f)
 	return result
@@ -594,14 +600,15 @@ def experimentOnC(args):
 	sparseSubspaceClustering(X,filename,numThreads=1,zeroThreshold=1e-12,aprxInf=9e+4)
 
 def compareESSCnSSCwithC(args):
-	file = args[1]
-	dire = args[2]
-	SRfile = "SR_"+file
-	with open(file,'r') as f:
+	infile = args[1]
+	indire = args[2]
+	outfile = args[3]
+	SRinfile = "SR_"+infile
+	with open(infile,'r') as f:
 		X = json.load(f)
 		y = X[1]
 		X = X[0]
-
+	K = max(y)+1
 	X = np.array(X)
 	X = normalize(X,axis=1)
 	subSamples = subSampling(range(len(X)))
@@ -609,12 +616,12 @@ def compareESSCnSSCwithC(args):
 	Weight = dict()
 	for i in xrange(len(subSamples)):
 		subsample = subSamples[i]
-		if os.path.exists(dire+str(i)):
-			with open(dire+str(i),'r') as f:
+		if os.path.exists(indire+str(i)):
+			with open(indire+str(i),'r') as f:
 				C = json.load(f)
 		else: C = constructSR(X[subsample],zeroThreshold=1e-12,aprxInf=9e+4)
 		print i,len(subSamples),len(subsample)
-		result = spectralClusteringWithL(getLaplacian(C))
+		result = spectralClusteringWithL(getLaplacian(C),K)
 		C = None
 		for i in xrange(len(result)):
 			for j in xrange(i+1,len(result)):
@@ -626,13 +633,15 @@ def compareESSCnSSCwithC(args):
 					Weight[i,j] = 1
 				else: Weight[i,j] = Weight[i,j] + 1
 	G = nx.Graph()
+	for i in xrange(len(X)):
+		G.add_node(i)
 	for edge in A:
 		if A[edge]*2 > Weight[edge]:  		#majority voting
 			G.add_edge(edge[0],edge[1])
 	A = None
-	ESSCresult = spectralClustering(G)
-	if os.path.exists(SRfile):
-		with open(SRfile,'r') as f:
+	ESSCresult = spectralClustering(G,K)
+	if os.path.exists(SRinfile):
+		with open(SRinfile,'r') as f:
 			C = json.load(f)
 	else:
 		with open(infile,'r') as f:
@@ -642,11 +651,11 @@ def compareESSCnSSCwithC(args):
 		X = np.array(X)
 		X = normalize(X,axis=1)
 		C = constructSR(X,zeroThreshold=1e-12,aprxInf=9e+4)
-	SSCresult = spectralClusteringWithL(getLaplacian(C))
-	#SSCresult = spectralClustering(constructAffinityGraph(C))
-	with open("SSCres_"+file,'w+') as f:
+	SSCresult = spectralClusteringWithL(getLaplacian(C),K)
+	#SSCresult = spectralClustering(constructAffinityGraph(C),K)
+	with open("SSCres_"+outfile,'w+') as f:
 		json.dump(SSCresult,f)
-	with open("ESSCres_"+file,'w+') as f:
+	with open("ESSCres_"+outfile,'w+') as f:
 		json.dump(ESSCresult,f)
 	print SSCresult,ESSCresult,
 	print "SSC",evaluate(y,SSCresult)
