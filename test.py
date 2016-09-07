@@ -339,7 +339,7 @@ def ensembleSparseSubspaceClustering(X,filename="",numThreads=16,zeroThreshold=1
 			for k in xrange(j+1,len(result)):
 				i1 = subsample[j]
 				i2 = subsample[k]
-				if result[i1] == result[i2]:
+				if result[j] == result[k]:
 					if (i1,i2) not in A:
 						A[i1,i2] = 1
 					else: A[i1,i2] = A[i1,i2] + 1
@@ -543,9 +543,9 @@ def runESSCSyn(args):
 	"""
 def runSSCSyn(args):
 	infile = args[1]
-	# outdire = args[2]
+	outdire = args[2]
 	# infile = "s"+str(i)+"dat"
-	outfile = "SR_"+infile
+	outfile = outdire+"SR_"+infile
 	if os.path.exists(outfile):
 		return False
 	with open(infile,'r') as f:
@@ -653,12 +653,12 @@ def compareESSCnSSCwithC(args):
 	infile = args[1]
 	indire = args[2]
 	outfile = args[3]
-	SRinfile = "SR_"+infile
+	SRinfile = indire+"SR_"+infile
 	with open(infile,'r') as f:
 		X = json.load(f)
 		y = X[1]
 		X = X[0]
-	# K = max(y)+1
+	K = max(y)+1
 	X = np.array(X)
 	X = normalize(X,axis=1)
 	subSamples = subSampling(range(len(X)))
@@ -677,7 +677,7 @@ def compareESSCnSSCwithC(args):
 			for k in xrange(j+1,len(result)):
 				i1 = subsample[j]
 				i2 = subsample[k]
-				if result[i1] == result[i2]:
+				if result[j] == result[k]:
 					if (i1,i2) not in A:
 						A[i1,i2] = 1
 					else: A[i1,i2] = A[i1,i2] + 1
@@ -705,9 +705,9 @@ def compareESSCnSSCwithC(args):
 		C = constructSR(X,zeroThreshold=1e-12,aprxInf=9e+4)
 	SSCresult = spectralClusteringWithL(getLaplacian(C),K)
 	#SSCresult = spectralClustering(constructAffinityGraph(C),K)
-	with open("SSCres_"+outfile,'w+') as f:
+	with open(indire+"SSCres_"+outfile,'w+') as f:
 		json.dump(SSCresult,f)
-	with open("ESSCres_"+outfile,'w+') as f:
+	with open(indire+"ESSCres_"+outfile,'w+') as f:
 		json.dump(ESSCresult,f)
 	print "SSC",SSCresult
 	print "ESSC",ESSCresult
