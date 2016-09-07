@@ -712,8 +712,9 @@ def compareESSCnSSCwithC(args):
 	print "SSC",SSCresult
 	print "ESSC",ESSCresult
 	print "Ans",y
-	print "SSC",evaluate(y,SSCresult)
-	print "ESSC",evaluate(y,ESSCresult)
+	print "SSC vs Ans",evaluate(y,SSCresult)
+	print "ESSC vs Ans",evaluate(y,ESSCresult)
+	print "SSC vs ESSC",evaluate(SSCresult,ESSCresult)
 
 
 if __name__ == "__main__":
