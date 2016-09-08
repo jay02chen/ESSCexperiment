@@ -122,7 +122,7 @@ def solveL1NormExactly(A,b):
 	h = np.hstack((b,-b,np.zeros((X.shape[1]*2))))
 	return linprog(c,G,h)
 
-def constructSR(X,zeroThreshold=1e-12,aprxInf=9e+4):
+def constructSR(X,zeroThreshold=0,aprxInf=9e+4):
 	"""
 	First solve 
 
@@ -234,7 +234,7 @@ def spectralClusteringWithL(L,K=-1):
 	result = km.fit_predict(np.array(v).T)
 	return result.tolist()
 
-def fastSSC(X,filename="",numThreads=16,zeroThreshold=1e-12,aprxInf=9e+4,write=False):
+def fastSSC(X,filename="",numThreads=16,zeroThreshold=0,aprxInf=9e+4,write=False):
 	"""
 	perform
 		constructSR() -> constructAffinityGraph() -> spectralClustering()
@@ -287,7 +287,7 @@ def fastSSC(X,filename="",numThreads=16,zeroThreshold=1e-12,aprxInf=9e+4,write=F
 			json.dump(result,f)
 	return result
 
-def sparseSubspaceClustering(X,filename="",numThreads=1,zeroThreshold=1e-12,aprxInf=9e+4):
+def sparseSubspaceClustering(X,filename="",numThreads=1,zeroThreshold=0,aprxInf=9e+4):
 	"""
 	The original sparse subspace clustering proposed in 
 	(Ehsan Elhamifar, et al. Sparse Subspace Clustering, 2009)
@@ -297,7 +297,7 @@ def sparseSubspaceClustering(X,filename="",numThreads=1,zeroThreshold=1e-12,aprx
 		III. 	apply spectral clustering on the affinity matrix
 	"""
 	if numThreads > 1:
-		return fastSSC(X,filename,numThreads=16,zeroThreshold=1e-12,aprxInf=9e+4,write=True)
+		return fastSSC(X,filename,numThreads=16,zeroThreshold=0,aprxInf=9e+4,write=True)
 	else:
 		C = constructSR(X,zeroThreshold,aprxInf)
 		if filename != "":
@@ -328,7 +328,7 @@ def subSampling(S,T=set()):
 	R.extend(subSampling(S0,S3))
 	return R
 
-def ensembleSparseSubspaceClustering(X,filename="",numThreads=16,zeroThreshold=1e-12,aprxInf=9e+4):
+def ensembleSparseSubspaceClustering(X,filename="",numThreads=16,zeroThreshold=0,aprxInf=9e+4):
 	"""
 	The method proposed in our work.
 	First construct subsamples according to 
@@ -344,7 +344,7 @@ def ensembleSparseSubspaceClustering(X,filename="",numThreads=16,zeroThreshold=1
 	numSubSample = len(subSamples)
 	for subsample in subSamples:
 		if numThreads > 1:
-			result = fastSSC(X[subsample],filename,numThreads=16,zeroThreshold=1e-12,aprxInf=9e+4,write=False)
+			result = fastSSC(X[subsample],filename,numThreads=16,zeroThreshold=0,aprxInf=9e+4,write=False)
 		else: result = spectralClustering(constructAffinityGraph(constructSR(X[subsample],zeroThreshold,aprxInf)),K)
 		for j in xrange(len(result)):
 			for k in xrange(j+1,len(result)):
@@ -415,7 +415,7 @@ def projDist(a,X):
 	s = 0.
 	for d in D:
 		a = PCA()
-def countNonzero(v,zeroThreshold=1e-12):
+def countNonzero(v,zeroThreshold=0):
 	"""
 	Count the number of non-zero components of the vector v
 	"""
@@ -588,7 +588,7 @@ def runESSCSyn(args):
 			continue
 		subsample = subSamples[i]
 		print i,len(subSamples),len(subsample)
-		C = constructSR(X[subsample],zeroThreshold=1e-12,aprxInf=9e+4)
+		C = constructSR(X[subsample],zeroThreshold=0,aprxInf=9e+4)
 		with open(outdire+str(i),'w+') as f:
 			json.dump(C,f)
 		C = None
@@ -606,11 +606,12 @@ def runSSCSyn(args):
 		X = X[0]
 	X = np.array(X)
 	X = normalize(X,axis=1)
-	C = constructSR(X,zeroThreshold=1e-12,aprxInf=9e+4)
+	C = constructSR(X,zeroThreshold=0,aprxInf=9e+4)
 	with open(outfile,'w+') as f:
 		json.dump(C,f)
 	C = None
 	return True
+
 def runESSCReal(args,reduct=True):
 	#"""
 	file = args[1]
@@ -639,7 +640,7 @@ def runESSCReal(args,reduct=True):
 			continue
 		subsample = subSamples[i]
 		print i,rend,len(subSamples),len(subsample)
-		C = constructSR(X[subsample],zeroThreshold=1e-12,aprxInf=9e+4)
+		C = constructSR(X[subsample],zeroThreshold=0,aprxInf=9e+4)
 		with open(dire+str(i),'w+') as f:
 			json.dump(C,f)
 		C = None
@@ -698,8 +699,8 @@ def CMUs86t5Label():
 	return benchmark
 
 def experimentOnC(args):
-	ensembleSparseSubspaceClustering(X,filename,numThreads=1,zeroThreshold=1e-12,aprxInf=9e+4)
-	sparseSubspaceClustering(X,filename,numThreads=1,zeroThreshold=1e-12,aprxInf=9e+4)
+	ensembleSparseSubspaceClustering(X,filename,numThreads=1,zeroThreshold=0,aprxInf=9e+4)
+	sparseSubspaceClustering(X,filename,numThreads=1,zeroThreshold=0,aprxInf=9e+4)
 
 def compareESSCnSSCwithC(args):
 	infile = args[1]
@@ -724,7 +725,7 @@ def compareESSCnSSCwithC(args):
 		if os.path.exists(indire+str(i)):
 			with open(indire+str(i),'r') as f:
 				C = json.load(f)
-		else: C = constructSR(X[subsample],zeroThreshold=1e-12,aprxInf=9e+4)
+		else: C = constructSR(X[subsample],zeroThreshold=0,aprxInf=9e+4)
 		subK = len(set([y[j] for j in subsample]))
 		if K == -1:
 			subK = -1
@@ -762,7 +763,7 @@ def compareESSCnSSCwithC(args):
 			X = X[0]
 		X = np.array(X)
 		X = normalize(X,axis=1)
-		C = constructSR(X,zeroThreshold=1e-12,aprxInf=9e+4)
+		C = constructSR(X,zeroThreshold=0,aprxInf=9e+4)
 	SSCresult = spectralClusteringWithL(getLaplacian(C),K)
 	#SSCresult = spectralClustering(constructAffinityGraph(C),K)
 	with open(indire+"SSCres_"+outfile,'w+') as f:
@@ -1095,12 +1096,79 @@ def mytrial4(args):
 			with open("writing_"+filename,'r') as f:
 				if int(f.readline()) != os.getpid():
 					continue
-			#runESSCSyn(argument)
-			#runSSCSyn(argument)
+			runESSCSyn(argument)
+			runSSCSyn(argument)
 			compareESSCnSSCwithC(argument)
 			argument = ["",filename,subdire,filename+"k","k"]
-			#runESSCSyn(argument)
-			#runSSCSyn(argument)
+			runESSCSyn(argument)
+			runSSCSyn(argument)
+			compareESSCnSSCwithC(argument)
+			#os.unlink("writing_"+filename)
+			with open("finish_"+filename,'w+') as f:
+				f.write("%d"%(os.getpid()))
+
+def mytrial5(args):
+	dire = "mytrial5/"
+	sigmaList = [0.001,0.01,0.1,1.0]
+	sigmaList = sorted(zip(range(len(sigmaList)),sigmaList),key=lambda x:x[1])
+	if (len(args) > 2 and args[2] == "redo") or not os.path.exists(dire):
+		print "regenerating synthetic data..."
+		if os.path.exists(dire):
+			for root, dirs, files in os.walk(dire, topdown=False):
+				for name in files:
+					os.remove(os.path.join(root, name))
+				for name in dirs:
+					os.rmdir(os.path.join(root, name))
+		else: os.mkdir(dire)
+	for i, sigma in sigmaList:
+		if not os.path.exists(dire+str(i)+"dat"):
+			X,y,Base = syntheticGenerator(n=20,d=[2,3,2,6,3,2],N=[200,50,300,150,200,600],sigma=sigma,orthonormal=True)
+			with open(dire+str(i)+"dat",'w+') as f:
+				json.dump([X.tolist(),y.tolist(),Base],f)
+	os.chdir(dire)
+	for i, sigma in sigmaList:
+		subdire = "s"+str(i)+"/"
+		if not os.path.exists(subdire):
+			os.mkdir(subdire)
+		filename = str(i)+"dat"
+		argument = ["",filename,subdire,filename]
+		sscfilename  = subdire+"SSCres_"+filename
+		esscfilename = subdire+"ESSCres_"+filename
+		print ""
+		print filename,":\tsigma = ",sigma
+		if len(args) == 2 and os.path.exists(sscfilename) and os.path.exists(esscfilename):
+			for nul in xrange(2):
+				with open(sscfilename,'r') as f:
+					SSCresult = json.load(f)
+				with open(esscfilename,'r') as f:
+					ESSCresult = json.load(f)
+				with open(filename,'r') as f:
+					tempX = json.load(f)
+					y = tempX[1]
+					tempX = None
+				# print "SSC",SSCresult
+				# print "ESSC",ESSCresult
+				# print "Ans",y
+				print "SSC vs Ans",evaluate(y,SSCresult)
+				print "ESSC vs Ans",evaluate(y,ESSCresult)
+				print "SSC vs ESSC",evaluate(SSCresult,ESSCresult)
+				print ""
+				sscfilename  = sscfilename  + "k"
+				esscfilename = esscfilename + "k"
+		elif os.path.exists("writing_"+filename):
+			continue
+		else:
+			with open("writing_"+filename,'w+') as f:
+				f.write("%d"%(os.getpid()))
+			with open("writing_"+filename,'r') as f:
+				if int(f.readline()) != os.getpid():
+					continue
+			runESSCSyn(argument)
+			runSSCSyn(argument)
+			compareESSCnSSCwithC(argument)
+			argument = ["",filename,subdire,filename+"k","k"]
+			runESSCSyn(argument)
+			runSSCSyn(argument)
 			compareESSCnSSCwithC(argument)
 			#os.unlink("writing_"+filename)
 			with open("finish_"+filename,'w+') as f:
@@ -1118,6 +1186,8 @@ if __name__ == "__main__":
 		mytrial3a(args)
 	elif sys.argv[1] == "mytrial4":
 		mytrial4(args)
+	elif sys.argv[1] == "mytrial5":
+		mytrial5(args)
 	else:
 		genSyn(args)
 		runESSCSyn(args)
