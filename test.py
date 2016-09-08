@@ -1041,7 +1041,7 @@ def mytrial3a(args):
 
 def mytrial4(args):
 	dire = "mytrial4/"
-	sigmaList = [0.001,0.01,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
+	sigmaList = [0.001,0.01,0.1,1.0]
 	sigmaList = sorted(zip(range(len(sigmaList)),sigmaList),key=lambda x:x[1])
 	if (len(args) > 2 and args[2] == "redo") or not os.path.exists(dire):
 		print "regenerating synthetic data..."
@@ -1102,7 +1102,10 @@ def mytrial4(args):
 			#runESSCSyn(argument)
 			#runSSCSyn(argument)
 			compareESSCnSSCwithC(argument)
-			os.unlink("writing_"+filename)
+			#os.unlink("writing_"+filename)
+			with open("finish_"+filename,'w+') as f:
+				f.write("%d"%(os.getpid()))
+
 if __name__ == "__main__":
 	args = [s for s in sys.argv]
 	if sys.argv[1] == "mytrial1":
