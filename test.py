@@ -348,8 +348,8 @@ def ensembleSparseSubspaceClustering(X,filename="",numThreads=16,zeroThreshold=1
 		else: result = spectralClustering(constructAffinityGraph(constructSR(X[subsample],zeroThreshold,aprxInf)),K)
 		for j in xrange(len(result)):
 			for k in xrange(j+1,len(result)):
-				i1 = subsample[j]
-				i2 = subsample[k]
+				i1 = min(subsample[j],subsample[k])
+				i2 = max(subsample[j],subsample[k])
 				if result[j] == result[k]:
 					if (i1,i2) not in A:
 						A[i1,i2] = 1
@@ -370,18 +370,42 @@ def ensembleSparseSubspaceClustering(X,filename="",numThreads=16,zeroThreshold=1
 
 def evaluate(a,b):
 	"""
-	Given two list of clustering result, count the number of consistent pair of instances
-	It is called consistent if (a[i] == a[j] and b[i] == b[j]) or (a[i] != a[j] and b[i] != b[j])
-	where i,j are different instances and a[i] denotes the label of subspace to which instance i belongs
+	Purity: 
+		1/N sum( max |a_k intersetct b_j| )
+			 k 	  j
+	Rank Index:
+		(TP + TN) / (FP + FN + TP + TN)
 	"""
+	R = dict()
+	TP = sum([1 for i in xrange(len(a)) for j in xrange(i+1,len(a)) if a[i]==a[j] and b[i]==b[j]])
+	TN = sum([1 for i in xrange(len(a)) for j in xrange(i+1,len(a)) if a[i]!=a[j] and b[i]!=b[j]])
+	FP = sum([1 for i in xrange(len(a)) for j in xrange(i+1,len(a)) if a[i]==a[j] and b[i]!=b[j]])
+	FN = sum([1 for i in xrange(len(a)) for j in xrange(i+1,len(a)) if a[i]!=a[j] and b[i]==b[j]])
+	R['TPTN'] = TP+TN
+	R['RI'] = float(TP+TN)/(TP+TN+FP+FN)
 	num = 0
-	error = 0
+	xset = dict()
+	for i in xrange(len(b)):
+		if b[i] not in xset:
+			xset[b[i]] = set()
+		xset[b[i]].add(i)
+	yset = dict()
 	for i in xrange(len(a)):
-		for j in xrange(i+1,len(a)):
-			num = num + 1
-			if (a[i]==a[j] and b[i]!=b[j]) or (a[i]!=a[j] and b[i]==b[j]):
-				error = error + 1
-	return error,num,float(error)/num
+		if a[i] not in yset:
+			yset[a[i]] = set()
+		yset[a[i]].add(i)
+	for ys in yset.values():
+		num = num + max([len(ys.intersection(xs)) for xs in xset.values()])
+	R['Purity'] = float(num)/len(a)
+	I = sum([(float(len(ys.intersection(xs)))/len(a))*scipy.log(float(len(a)*len(ys.intersection(xs)))/(len(ys)*len(xs))) for xs in xset.values() for ys in yset.values() if len(ys.intersection(xs)) > 0])
+	Hx = sum([-(float(len(xs))/len(a))*scipy.log(float(len(xs))/len(a)) for xs in xset.values()])
+	Hy = sum([-(float(len(ys))/len(a))*scipy.log(float(len(ys))/len(a)) for ys in yset.values()])
+	R['NMI'] = float(2*I)/(Hx+Hy)
+	R['Precision'] = float(TP)/(TP+FP)
+	R['Recall'] = float(TP)/(TP+FN)
+	R['F1 measure'] = float(2*R['Precision']*R['Recall'])/(R['Precision']+R['Recall'])
+	R['F5 measure'] = float(26*R['Precision']*R['Recall'])/(25*R['Precision']+R['Recall'])
+	return R
 def projDist(a,X):
 	D = dict()
 	for i in xrange(len(a)):
@@ -687,7 +711,7 @@ def compareESSCnSSCwithC(args):
 		y = X[1]
 		X = X[0]
 	if len(args) > 4 and (args[4] == "k" or args[4] == "K"):
-		K = max(y)+1
+		K = len(set(y))
 	else: K = -1
 	print "K = ",K
 	X = np.array(X)
@@ -701,13 +725,18 @@ def compareESSCnSSCwithC(args):
 			with open(indire+str(i),'r') as f:
 				C = json.load(f)
 		else: C = constructSR(X[subsample],zeroThreshold=1e-12,aprxInf=9e+4)
-		print i,len(subSamples),len(subsample)
-		result = spectralClusteringWithL(getLaplacian(C),K)
+		subK = len(set([y[j] for j in subsample]))
+		if K == -1:
+			subK = -1
+		result = spectralClusteringWithL(getLaplacian(C),subK)
+		print i,len(subSamples),len(subsample),subK,evaluate(result,[y[s] for s in subsample])
+		print {cluster:len([1 for ss in subsample if y[ss] == cluster]) for cluster in [cluster for cluster in set([y[s] for s in subsample])]}
+		print ""
 		C = None
 		for j in xrange(len(result)):
 			for k in xrange(j+1,len(result)):
-				i1 = subsample[j]
-				i2 = subsample[k]
+				i1 = min(subsample[j],subsample[k])
+				i2 = max(subsample[j],subsample[k])
 				if result[j] == result[k]:
 					if (i1,i2) not in A:
 						A[i1,i2] = 1
@@ -750,6 +779,7 @@ def compareESSCnSSCwithC(args):
 def mytrial1(args):
 	dire = "mytrial1/"
 	sigmaList = [0.001,0.01,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
+	sigmaList = sorted(zip(range(len(sigmaList)),sigmaList),key=lambda x:x[1])
 	if len(args) > 2 and args[2] == "redo":
 		print "regenerating synthetic data..."
 		if os.path.exists(dire):
@@ -759,13 +789,13 @@ def mytrial1(args):
 				for name in dirs:
 					os.rmdir(os.path.join(root, name))
 		else: os.mkdir(dire)
-	for i in xrange(len(sigmaList)):
+	for i, sigma in sigmaList:
 		if not os.path.exists(dire+str(i)+"dat"):
-			X,y,Base = syntheticGenerator(n=20,d=[3,3,3,3,3,3],N=[40,10,60,30,40,120],sigma=sigmaList[i],orthonormal=False)
+			X,y,Base = syntheticGenerator(n=20,d=[3,3,3,3,3,3],N=[40,10,60,30,40,120],sigma=sigma,orthonormal=False)
 			with open(dire+str(i)+"dat",'w+') as f:
 				json.dump([X.tolist(),y.tolist(),Base],f)
 	os.chdir(dire)
-	for i in xrange(len(sigmaList)):
+	for i, sigma in sigmaList:
 		subdire = "s"+str(i)+"/"
 		if not os.path.exists(subdire):
 			os.mkdir(subdire)
@@ -774,7 +804,7 @@ def mytrial1(args):
 		sscfilename  = subdire+"SSCres_"+filename
 		esscfilename = subdire+"ESSCres_"+filename
 		print ""
-		print filename,":\tsigma = ",sigmaList[i]
+		print filename,":\tsigma = ",sigma
 		if len(args) == 2 and os.path.exists(sscfilename) and os.path.exists(esscfilename):
 			for nul in xrange(2):
 				with open(sscfilename,'r') as f:
@@ -794,7 +824,14 @@ def mytrial1(args):
 				print ""
 				sscfilename  = sscfilename  + "k"
 				esscfilename = esscfilename + "k"
+		elif os.path.exists("writing_"+filename):
+			continue
 		else:
+			with open("writing_"+filename,'w+') as f:
+				f.write("%d"%(os.getpid()))
+			with open("writing_"+filename,'r') as f:
+				if int(f.readline()) != os.getpid():
+					continue
 			runESSCSyn(argument)
 			runSSCSyn(argument)
 			compareESSCnSSCwithC(argument)
@@ -802,10 +839,12 @@ def mytrial1(args):
 			runESSCSyn(argument)
 			runSSCSyn(argument)
 			compareESSCnSSCwithC(argument)
+			os.unlink("writing_"+filename)
 
 def mytrial2(args):
 	dire = "mytrial2/"
 	sigmaList = [0.001,0.01,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
+	sigmaList = sorted(zip(range(len(sigmaList)),sigmaList),key=lambda x:x[1])
 	if (len(args) > 2 and args[2] == "redo") or not os.path.exists(dire):
 		print "regenerating synthetic data..."
 		if os.path.exists(dire):
@@ -815,13 +854,13 @@ def mytrial2(args):
 				for name in dirs:
 					os.rmdir(os.path.join(root, name))
 		else: os.mkdir(dire)
-	for i in xrange(len(sigmaList)):
+	for i, sigma in sigmaList:
 		if not os.path.exists(dire+str(i)+"dat"):
-			X,y,Base = syntheticGenerator(n=20,d=[2,2,2,2,2,2],N=[40,10,60,30,40,120],sigma=sigmaList[i],orthonormal=False)
+			X,y,Base = syntheticGenerator(n=20,d=[2,2,2,2,2,2],N=[40,10,60,30,40,120],sigma=sigma,orthonormal=False)
 			with open(dire+str(i)+"dat",'w+') as f:
 				json.dump([X.tolist(),y.tolist(),Base],f)
 	os.chdir(dire)
-	for i in xrange(len(sigmaList)):
+	for i, sigma in sigmaList:
 		subdire = "s"+str(i)+"/"
 		if not os.path.exists(subdire):
 			os.mkdir(subdire)
@@ -830,7 +869,7 @@ def mytrial2(args):
 		sscfilename  = subdire+"SSCres_"+filename
 		esscfilename = subdire+"ESSCres_"+filename
 		print ""
-		print filename,":\tsigma = ",sigmaList[i]
+		print filename,":\tsigma = ",sigma
 		if len(args) == 2 and os.path.exists(sscfilename) and os.path.exists(esscfilename):
 			for nul in xrange(2):
 				with open(sscfilename,'r') as f:
@@ -850,7 +889,14 @@ def mytrial2(args):
 				print ""
 				sscfilename  = sscfilename  + "k"
 				esscfilename = esscfilename + "k"
+		elif os.path.exists("writing_"+filename):
+			continue
 		else:
+			with open("writing_"+filename,'w+') as f:
+				f.write("%d"%(os.getpid()))
+			with open("writing_"+filename,'r') as f:
+				if int(f.readline()) != os.getpid():
+					continue
 			runESSCSyn(argument)
 			runSSCSyn(argument)
 			compareESSCnSSCwithC(argument)
@@ -858,9 +904,11 @@ def mytrial2(args):
 			runESSCSyn(argument)
 			runSSCSyn(argument)
 			compareESSCnSSCwithC(argument)
+			os.unlink("writing_"+filename)
 def mytrial3(args):
 	dire = "mytrial3/"
 	sigmaList = [0.001,0.01,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
+	sigmaList = sorted(zip(range(len(sigmaList)),sigmaList),key=lambda x:x[1])
 	if (len(args) > 2 and args[2] == "redo") or not os.path.exists(dire):
 		print "regenerating synthetic data..."
 		if os.path.exists(dire):
@@ -870,13 +918,13 @@ def mytrial3(args):
 				for name in dirs:
 					os.rmdir(os.path.join(root, name))
 		else: os.mkdir(dire)
-	for i in xrange(len(sigmaList)):
+	for i, sigma in sigmaList:
 		if not os.path.exists(dire+str(i)+"dat"):
-			X,y,Base = syntheticGenerator(n=20,d=[3,3,3,3,3,3],N=[40,10,60,30,40,120],sigma=sigmaList[i],orthonormal=True)
+			X,y,Base = syntheticGenerator(n=20,d=[3,3,3,3,3,3],N=[40,10,60,30,40,120],sigma=sigma,orthonormal=True)
 			with open(dire+str(i)+"dat",'w+') as f:
 				json.dump([X.tolist(),y.tolist(),Base],f)
 	os.chdir(dire)
-	for i in xrange(len(sigmaList)):
+	for i, sigma in sigmaList:
 		subdire = "s"+str(i)+"/"
 		if not os.path.exists(subdire):
 			os.mkdir(subdire)
@@ -885,7 +933,7 @@ def mytrial3(args):
 		sscfilename  = subdire+"SSCres_"+filename
 		esscfilename = subdire+"ESSCres_"+filename
 		print ""
-		print filename,":\tsigma = ",sigmaList[i]
+		print filename,":\tsigma = ",sigma
 		if len(args) == 2 and os.path.exists(sscfilename) and os.path.exists(esscfilename):
 			for nul in xrange(2):
 				with open(sscfilename,'r') as f:
@@ -905,7 +953,14 @@ def mytrial3(args):
 				print ""
 				sscfilename  = sscfilename  + "k"
 				esscfilename = esscfilename + "k"
+		elif os.path.exists("writing_"+filename):
+			continue
 		else:
+			with open("writing_"+filename,'w+') as f:
+				f.write("%d"%(os.getpid()))
+			with open("writing_"+filename,'r') as f:
+				if int(f.readline()) != os.getpid():
+					continue
 			runESSCSyn(argument)
 			runSSCSyn(argument)
 			compareESSCnSSCwithC(argument)
@@ -913,9 +968,13 @@ def mytrial3(args):
 			runESSCSyn(argument)
 			runSSCSyn(argument)
 			compareESSCnSSCwithC(argument)
-def mytrial4(args):
-	dire = "mytrial4/"
+			os.unlink("writing_"+filename)
+def mytrial3a(args):
+	dire = "mytrial3a/"
 	sigmaList = [0.001,0.01,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
+	sigmaList.extend([0.0001,0.05,0.15,0.25,0.35,0.45,0.55,0.65,0.75,0.85,0.95])
+	sigmaList.extend([0.05,0.075,0.125,0.175,0.225,0.275,0.325,0.375,0.425,0.475])
+	sigmaList = sorted(zip(range(len(sigmaList)),sigmaList),key=lambda x:x[1])
 	if (len(args) > 2 and args[2] == "redo") or not os.path.exists(dire):
 		print "regenerating synthetic data..."
 		if os.path.exists(dire):
@@ -925,13 +984,13 @@ def mytrial4(args):
 				for name in dirs:
 					os.rmdir(os.path.join(root, name))
 		else: os.mkdir(dire)
-	for i in xrange(len(sigmaList)):
+	for i, sigma in sigmaList:
 		if not os.path.exists(dire+str(i)+"dat"):
-			X,y,Base = syntheticGenerator(n=20,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=sigmaList[i],orthonormal=True)
+			X,y,Base = syntheticGenerator(n=20,d=[3,3,3,3,3,3],N=[40,10,60,30,40,120],sigma=sigma,orthonormal=True)
 			with open(dire+str(i)+"dat",'w+') as f:
 				json.dump([X.tolist(),y.tolist(),Base],f)
 	os.chdir(dire)
-	for i in xrange(len(sigmaList)):
+	for i, sigma in sigmaList:
 		subdire = "s"+str(i)+"/"
 		if not os.path.exists(subdire):
 			os.mkdir(subdire)
@@ -940,7 +999,75 @@ def mytrial4(args):
 		sscfilename  = subdire+"SSCres_"+filename
 		esscfilename = subdire+"ESSCres_"+filename
 		print ""
-		print filename,":\tsigma = ",sigmaList[i]
+		print filename,":\tsigma = ",sigma
+
+		if len(args) == 2 and os.path.exists(sscfilename) and os.path.exists(esscfilename):
+			for nul in xrange(2):
+				with open(sscfilename,'r') as f:
+					SSCresult = json.load(f)
+				with open(esscfilename,'r') as f:
+					ESSCresult = json.load(f)
+				with open(filename,'r') as f:
+					tempX = json.load(f)
+					y = tempX[1]
+					tempX = None
+				# print "SSC",SSCresult
+				# print "ESSC",ESSCresult
+				# print "Ans",y
+				score_SSC = evaluate(y,SSCresult)
+				score_ESSC = evaluate(y,ESSCresult)
+				print "SSC vs Ans", score_SSC 
+				print "ESSC vs Ans", score_ESSC
+				print "SSC vs ESSC",evaluate(SSCresult,ESSCresult)
+				print ""
+				sscfilename  = sscfilename  + "k"
+				esscfilename = esscfilename + "k"
+		elif os.path.exists("writing_"+filename):
+			continue
+		else:
+			with open("writing_"+filename,'w+') as f:
+				f.write("%d"%(os.getpid()))
+			with open("writing_"+filename,'r') as f:
+				if int(f.readline()) != os.getpid():
+					continue
+			runESSCSyn(argument)
+			runSSCSyn(argument)
+			compareESSCnSSCwithC(argument)
+			argument = ["",filename,subdire,filename+"k","k"]
+			runESSCSyn(argument)
+			runSSCSyn(argument)
+			compareESSCnSSCwithC(argument)
+			os.unlink("writing_"+filename)
+
+def mytrial4(args):
+	dire = "mytrial4/"
+	sigmaList = [0.001,0.01,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
+	sigmaList = sorted(zip(range(len(sigmaList)),sigmaList),key=lambda x:x[1])
+	if (len(args) > 2 and args[2] == "redo") or not os.path.exists(dire):
+		print "regenerating synthetic data..."
+		if os.path.exists(dire):
+			for root, dirs, files in os.walk(dire, topdown=False):
+				for name in files:
+					os.remove(os.path.join(root, name))
+				for name in dirs:
+					os.rmdir(os.path.join(root, name))
+		else: os.mkdir(dire)
+	for i, sigma in sigmaList:
+		if not os.path.exists(dire+str(i)+"dat"):
+			X,y,Base = syntheticGenerator(n=20,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=sigma,orthonormal=True)
+			with open(dire+str(i)+"dat",'w+') as f:
+				json.dump([X.tolist(),y.tolist(),Base],f)
+	os.chdir(dire)
+	for i, sigma in sigmaList:
+		subdire = "s"+str(i)+"/"
+		if not os.path.exists(subdire):
+			os.mkdir(subdire)
+		filename = str(i)+"dat"
+		argument = ["",filename,subdire,filename]
+		sscfilename  = subdire+"SSCres_"+filename
+		esscfilename = subdire+"ESSCres_"+filename
+		print ""
+		print filename,":\tsigma = ",sigma
 		if len(args) == 2 and os.path.exists(sscfilename) and os.path.exists(esscfilename):
 			for nul in xrange(2):
 				with open(sscfilename,'r') as f:
@@ -984,6 +1111,8 @@ if __name__ == "__main__":
 		mytrial2(args)
 	elif sys.argv[1] == "mytrial3":
 		mytrial3(args)
+	elif sys.argv[1] == "mytrial3a":
+		mytrial3a(args)
 	elif sys.argv[1] == "mytrial4":
 		mytrial4(args)
 	else:
