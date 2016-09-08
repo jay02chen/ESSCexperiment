@@ -47,7 +47,8 @@ def syntheticGenerator(n,d,N,sigma,orthonormal=False):
 		else:
 			base = np.random.uniform(0,1,(dim,n))
 			base = sklearn.preprocessing.normalize(base,axis=1)
-		X.extend((np.random.dirichlet(np.ones(dim),Num)).dot(base) + np.random.normal(0,sigma/np.sqrt(n),(Num,n)))
+		# X.extend((np.random.dirichlet(np.ones(dim),Num)).dot(base) + np.random.normal(0,sigma/np.sqrt(n),(Num,n)))
+		X.extend(sklearn.preprocessing.normalize(np.random.uniform(-1,1,(Num,dim)).dot(base),axis=1) + np.random.normal(0,sigma/np.sqrt(n),(Num,n)))
 		label.extend([k for i in xrange(Num)])
 		Base.append(base.tolist())
 	mapping = np.array([np.array([i,label[i]]) for i in xrange(len(label))])
