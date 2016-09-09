@@ -76,7 +76,10 @@ def subtrial(args):
 		if os.path.exists(indire+str(i)):
 			with open(indire+str(i),'r') as f:
 				C = json.load(f)
-		else: C = constructSR(X[subsample],sigma=sigma)
+		else: 
+			C = constructSR(X[subsample],sigma=sigma)
+			with open(indire+str(i),'w+') as f:
+				json.dump(C,f)
 		subK = len(set([y[j] for j in subsample]))
 		if K == -1:
 			subK = -1
@@ -109,6 +112,8 @@ def subtrial(args):
 			C = json.load(f)
 	else:
 		C = constructSR(X,sigma=sigma)
+		with open(SRinfile,'w+') as f:
+			json.dump(C,f)
 	SSCresult = spectralClusteringWithL(getLaplacian(C),K)
 	with open(indire+"SSCres_"+outfile,'w+') as f:
 		json.dump(SSCresult,f)
