@@ -16,6 +16,56 @@ from scipy.sparse.csgraph import laplacian
 from cvxopt import matrix
 from networkx.readwrite import json_graph
 
+def evaluate(a,b):
+	"""
+	Purity: 
+		1/N sum( max |a_k intersetct b_j| )
+			 k 	  j
+	Rank Index:
+		(TP + TN) / (FP + FN + TP + TN)
+	"""
+	R = dict()
+	TP = sum([1 for i in xrange(len(a)) for j in xrange(i+1,len(a)) if a[i]==a[j] and b[i]==b[j]])
+	TN = sum([1 for i in xrange(len(a)) for j in xrange(i+1,len(a)) if a[i]!=a[j] and b[i]!=b[j]])
+	FP = sum([1 for i in xrange(len(a)) for j in xrange(i+1,len(a)) if a[i]==a[j] and b[i]!=b[j]])
+	FN = sum([1 for i in xrange(len(a)) for j in xrange(i+1,len(a)) if a[i]!=a[j] and b[i]==b[j]])
+	R['TPTN'] = TP+TN
+	if (TP+TN+FP+FN) != 0:
+		R['RI'] = float(TP+TN)/(TP+TN+FP+FN)
+	else: R['RI'] = 0
+	num = 0
+	xset = dict()
+	for i in xrange(len(b)):
+		if b[i] not in xset:
+			xset[b[i]] = set()
+		xset[b[i]].add(i)
+	yset = dict()
+	for i in xrange(len(a)):
+		if a[i] not in yset:
+			yset[a[i]] = set()
+		yset[a[i]].add(i)
+	for ys in yset.values():
+		num = num + max([len(ys.intersection(xs)) for xs in xset.values()])
+	if len(a) != 0:
+		R['Purity'] = float(num)/len(a)
+	else: R['Purity'] = 0
+	I = sum([(float(len(ys.intersection(xs)))/len(a))*scipy.log(float(len(a)*len(ys.intersection(xs)))/(len(ys)*len(xs))) for xs in xset.values() for ys in yset.values() if len(ys.intersection(xs)) > 0])
+	Hx = sum([-(float(len(xs))/len(a))*scipy.log(float(len(xs))/len(a)) for xs in xset.values()])
+	Hy = sum([-(float(len(ys))/len(a))*scipy.log(float(len(ys))/len(a)) for ys in yset.values()])
+	if Hx+Hy != 0:
+		R['NMI'] = float(2*I)/(Hx+Hy)
+	else: R['NMI'] = 0.
+	if TP+FP != 0:
+		R['Precision'] = float(TP)/(TP+FP)
+	else: R['Precision'] = 0
+	R['Recall'] = float(TP)/(TP+FN)
+	if R['Precision'] + R['Recall'] != 0:
+		R['F1 measure'] = float(2*R['Precision']*R['Recall'])/(R['Precision']+R['Recall'])
+	else: R['F1 measure'] = 0
+	if (25*R['Precision']+R['Recall']) != 0:
+		R['F5 measure'] = float(26*R['Precision']*R['Recall'])/(25*R['Precision']+R['Recall'])
+	else: R['F5 measure'] = 0
+	return R
 
 def syntheticGenerator(n,d,N,sigma,orthonormal=False):
 	"""
@@ -369,44 +419,6 @@ def ensembleSparseSubspaceClustering(X,filename="",numThreads=16,zeroThreshold=0
 		json.dump(result,f)
 	return result
 
-def evaluate(a,b):
-	"""
-	Purity: 
-		1/N sum( max |a_k intersetct b_j| )
-			 k 	  j
-	Rank Index:
-		(TP + TN) / (FP + FN + TP + TN)
-	"""
-	R = dict()
-	TP = sum([1 for i in xrange(len(a)) for j in xrange(i+1,len(a)) if a[i]==a[j] and b[i]==b[j]])
-	TN = sum([1 for i in xrange(len(a)) for j in xrange(i+1,len(a)) if a[i]!=a[j] and b[i]!=b[j]])
-	FP = sum([1 for i in xrange(len(a)) for j in xrange(i+1,len(a)) if a[i]==a[j] and b[i]!=b[j]])
-	FN = sum([1 for i in xrange(len(a)) for j in xrange(i+1,len(a)) if a[i]!=a[j] and b[i]==b[j]])
-	R['TPTN'] = TP+TN
-	R['RI'] = float(TP+TN)/(TP+TN+FP+FN)
-	num = 0
-	xset = dict()
-	for i in xrange(len(b)):
-		if b[i] not in xset:
-			xset[b[i]] = set()
-		xset[b[i]].add(i)
-	yset = dict()
-	for i in xrange(len(a)):
-		if a[i] not in yset:
-			yset[a[i]] = set()
-		yset[a[i]].add(i)
-	for ys in yset.values():
-		num = num + max([len(ys.intersection(xs)) for xs in xset.values()])
-	R['Purity'] = float(num)/len(a)
-	I = sum([(float(len(ys.intersection(xs)))/len(a))*scipy.log(float(len(a)*len(ys.intersection(xs)))/(len(ys)*len(xs))) for xs in xset.values() for ys in yset.values() if len(ys.intersection(xs)) > 0])
-	Hx = sum([-(float(len(xs))/len(a))*scipy.log(float(len(xs))/len(a)) for xs in xset.values()])
-	Hy = sum([-(float(len(ys))/len(a))*scipy.log(float(len(ys))/len(a)) for ys in yset.values()])
-	R['NMI'] = float(2*I)/(Hx+Hy)
-	R['Precision'] = float(TP)/(TP+FP)
-	R['Recall'] = float(TP)/(TP+FN)
-	R['F1 measure'] = float(2*R['Precision']*R['Recall'])/(R['Precision']+R['Recall'])
-	R['F5 measure'] = float(26*R['Precision']*R['Recall'])/(25*R['Precision']+R['Recall'])
-	return R
 def projDist(a,X):
 	D = dict()
 	for i in xrange(len(a)):
