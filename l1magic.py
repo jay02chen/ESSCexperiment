@@ -110,7 +110,7 @@ def l1qc_logbarrier(A,b,epsilon,lbtol=np.float64(1e-3),mu=np.float64(10),cgtol=n
 	for ii in xrange(1,int(lbiter)+1):
 		xp,up,ntiter = l1qc_newton(x,u,A,b,epsilon,tau, newtontol, newtonmaxiter, cgtol, cgmaxiter)
 		totaliter = totaliter + ntiter
-		print "\nLog barrier iter = %d, l1 = %.3f, functional = %8.3f, tau = %8.3e, total newton iter = %d\n"%(ii, sum(abs(xp)), sum(up), tau, totaliter)
+		# print "\nLog barrier iter = %d, l1 = %.3f, functional = %8.3f, tau = %8.3e, total newton iter = %d\n"%(ii, sum(abs(xp)), sum(up), tau, totaliter)
 		x = xp
 		u = up
 		tau = mu*tau
