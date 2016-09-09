@@ -206,25 +206,26 @@ def constructSR(X,zeroThreshold=0,aprxInf=9e+4,sigma=1e-4):
 	"""
 	First solve 
 
-		minimize ||c||_1 + aprxInf^2 * ||c^T X_{-n} - x_n||_2^2
-			c
-
-	which is an approximation of
-
 		minimize ||c||_1
 			c
-		s.t  c^T X_{-n} = x_n
+		s.t. ||c^T X_{-n} - x_n||_2 <= 2*sigma,  c_n = 0
 
-	provided that aprxInf is sufficiently large.
 	Let c* denotes the solution to the above problem.
 	Since (Mahdi Soltanolkotabi et al. Robust Subspace Clustering, 2013) found that
-	better choice of lambda is around 1/sqrt(dimension),
-	where 
-			sqrt(dimension) ~= 0.25 / ||c*||_1
+	better choice of lambda is around 1/sqrt(dimension), and that
+
+			sqrt(dimension) ~= 4 * ||c*||_1
+
+		=>	lambda ~= 0.25 / ||c*||_1
 
 	Therefore, we formulate the second-phase optimization problem as
 
-		minimize ||c_1|| + (4*||c*||_1 / 2)||c^T X_{-n} - x_n||_2
+		minimize lambda*||c_1||_1 + (1/2)||c^T X_{-n} - x_n||_2^2
+			c
+
+	which is equivalent to solve
+
+		minimize ||c_1||_1 + ||(c^T X_{-n} - x_n)sqrt(2*||c*||_1)||_2^2
 			c
 	
 	This function will find the Sparse Representation for each instance sequentially,
