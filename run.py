@@ -7,7 +7,7 @@ import numpy as np
 from sklearn.preprocessing import normalize
 
 def trial(args):
-	dire = args[1]
+	dire = args[1]+"/"
 	sigmaList = [0.001,0.01,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
 	sigmaList = sorted(zip(range(len(sigmaList)),sigmaList),key=lambda x:x[1])
 	if (len(args) > 2 and args[2] == "redo") or not os.path.exists(dire):
@@ -60,8 +60,8 @@ def subtrial(args):
 	with open(infile,'r') as f:
 		X = json.load(f)
 		y = X[1]
-		X = X[0]
 		sigma = X[3][3]
+		X = X[0]
 	if len(args) > 4 and (args[4] == "k" or args[4] == "K"):
 		K = len(set(y))
 	else: K = -1
@@ -128,6 +128,4 @@ def subtrial(args):
 
 if __name__ == "__main__":
 	args = [s for s in sys.argv]
-	if sys.argv[1] == "trial1":
-		args[1] = "trial1/"
-		trial(args)
+	trial(args)

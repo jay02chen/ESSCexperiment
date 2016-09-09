@@ -63,7 +63,6 @@ def l1qc_newton(x0,u0,A,b,epsilon,tau,newtontol=np.float64(1e-3),newtonmaxiter=5
 			fep = f64one/2*(rp.T.dot(rp) - epsilon**2)
 			fp = sum(up) - (f64one/tau)*(sum(log(-fu1p)) + sum(log(-fu2p)) + log(-fep))
 			flin = f + alpha*s*(gradf.T.dot(np.hstack((dx,du))))
-			# print fep,fp,flin
 			suffdec = (fp <= flin)
 			s = beta*s 
 			backiter = backiter + 1
@@ -84,7 +83,7 @@ def l1qc_newton(x0,u0,A,b,epsilon,tau,newtontol=np.float64(1e-3),newtonmaxiter=5
 		stepsize = np.float64(s*norm(np.hstack((dx,du))))
 		niter = niter + 1
 		done = (lambda2/2 < newtontol) or (niter >= newtonmaxiter)
-		# print "Newton iter = %d, Functional = %8.3f, Newton decrement = %8.3f, Stepsize = %8.3e"%(niter, f, lambda2/2, stepsize)
+		#print "Newton iter = %d, Functional = %8.3f, Newton decrement = %8.3f, Stepsize = %8.3e"%(niter, f, lambda2/2, stepsize)
 	return xp, up, niter
 
 def l1qc_logbarrier(A,b,epsilon,lbtol=np.float64(1e-3),mu=np.float64(10),cgtol=np.float64(1e-8),cgmaxiter=200):
@@ -100,7 +99,7 @@ def l1qc_logbarrier(A,b,epsilon,lbtol=np.float64(1e-3),mu=np.float64(10),cgtol=n
 		x0 = np.float64(A.T.dot(w))
 	x = x0
 	u = 0.95*abs(x0) + 0.10*max(abs(x0))
-	# print "Original l1 norm = %.3f, original functional = %.3f"%(sum(abs(x0)), sum(u))
+	#print "Original l1 norm = %.3f, original functional = %.3f"%(sum(abs(x0)), sum(u))
 	# choose initial value of tau so that the duality gap after the first
 	# step will be about the origial norm
 	tau = max(np.float64(2*N+1)/sum(abs(x0)), 1)
@@ -110,7 +109,7 @@ def l1qc_logbarrier(A,b,epsilon,lbtol=np.float64(1e-3),mu=np.float64(10),cgtol=n
 	for ii in xrange(1,int(lbiter)+1):
 		xp,up,ntiter = l1qc_newton(x,u,A,b,epsilon,tau, newtontol, newtonmaxiter, cgtol, cgmaxiter)
 		totaliter = totaliter + ntiter
-		# print "\nLog barrier iter = %d, l1 = %.3f, functional = %8.3f, tau = %8.3e, total newton iter = %d\n"%(ii, sum(abs(xp)), sum(up), tau, totaliter)
+		#print "\nLog barrier iter = %d, l1 = %.3f, functional = %8.3f, tau = %8.3e, total newton iter = %d\n"%(ii, sum(abs(xp)), sum(up), tau, totaliter)
 		x = xp
 		u = up
 		tau = mu*tau

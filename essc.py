@@ -232,6 +232,7 @@ def constructSR(X,zeroThreshold=0,aprxInf=9e+4,sigma=1e-4):
 	"""
 	solvers.options['show_progress'] = False
 	C = np.zeros((len(X),len(X)))
+	print "sigma = %f\n"%(sigma)
 	for n in xrange(len(X)):
 		A = X
 		A = np.delete(A,n,axis=0)
