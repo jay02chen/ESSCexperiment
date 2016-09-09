@@ -718,6 +718,67 @@ def compareESSCnSSCwithC(args):
 	print "K = ",K
 	X = np.array(X)
 	X = normalize(X,axis=1)
+	A = np.zeros((len(X),len(X)))
+	subSamples = subSampling(range(len(X)))
+	Weight = dict()
+	for i in xrange(len(subSamples)):
+		subsample = subSamples[i]
+		if os.path.exists(indire+str(i)):
+			with open(indire+str(i),'r') as f:
+				C = json.load(f)
+		else: C = constructSR(X[subsample],zeroThreshold=0,aprxInf=9e+4)
+		for j in xrange(len(subsample)):
+			for k in xrange(j+1,len(subsample)):
+				i1 = min(subsample[j],subsample[k])
+				i2 = max(subsample[j],subsample[k])
+				A[i1][i2] = A[i1][i2] + C[j][k]
+				if (i1,i2) not in Weight:
+					Weight[i1,i2] = 1
+				else: Weight[i1,i2] = Weight[i1,i2] + 1
+	for j in xrange(len(X)):
+		for k in xrange(i+1,len(X)):
+			A[j][k] = A[j][k]/Weight[i1,i2]
+
+	ESSCresult = spectralClusteringwithL(getLaplacian(A),K)
+	if os.path.exists(SRinfile):
+		with open(SRinfile,'r') as f:
+			C = json.load(f)
+	else:
+		with open(infile,'r') as f:
+			X = json.load(f)
+			y = X[1]
+			X = X[0]
+		X = np.array(X)
+		X = normalize(X,axis=1)
+		C = constructSR(X,zeroThreshold=0,aprxInf=9e+4)
+	SSCresult = spectralClusteringWithL(getLaplacian(C),K)
+	#SSCresult = spectralClustering(constructAffinityGraph(C),K)
+	with open(indire+"SSCres_"+outfile,'w+') as f:
+		json.dump(SSCresult,f)
+	with open(indire+"newESSCres_"+outfile,'w+') as f:
+		json.dump(ESSCresult,f)
+	print "SSC",SSCresult
+	print "ESSC",ESSCresult
+	print "Ans",y
+	print "SSC vs Ans",evaluate(y,SSCresult)
+	print "ESSC vs Ans",evaluate(y,ESSCresult)
+	print "SSC vs ESSC",evaluate(SSCresult,ESSCresult)
+
+def oldCompareESSCnSSCwithC(args):
+	infile = args[1]
+	indire = args[2]
+	outfile = args[3]
+	SRinfile = indire+"SR_"+infile
+	with open(infile,'r') as f:
+		X = json.load(f)
+		y = X[1]
+		X = X[0]
+	if len(args) > 4 and (args[4] == "k" or args[4] == "K"):
+		K = len(set(y))
+	else: K = -1
+	print "K = ",K
+	X = np.array(X)
+	X = normalize(X,axis=1)
 	subSamples = subSampling(range(len(X)))
 	A = dict()
 	Weight = dict()
@@ -926,6 +987,12 @@ def mytrial3(args):
 			with open(dire+str(i)+"dat",'w+') as f:
 				json.dump([X.tolist(),y.tolist(),Base],f)
 	os.chdir(dire)
+	YvESSC = []
+	YvSSC = []
+	SSCvESSC = []
+	YvESSCk = []
+	YvSSCk = []
+	SSCvESSCk = []
 	for i, sigma in sigmaList:
 		subdire = "s"+str(i)+"/"
 		if not os.path.exists(subdire):
@@ -949,12 +1016,24 @@ def mytrial3(args):
 				# print "SSC",SSCresult
 				# print "ESSC",ESSCresult
 				# print "Ans",y
-				print "SSC vs Ans",evaluate(y,SSCresult)
-				print "ESSC vs Ans",evaluate(y,ESSCresult)
-				print "SSC vs ESSC",evaluate(SSCresult,ESSCresult)
+				yvSSC = evaluate(y,SSCresult)
+				yvESSC = evaluate(y,ESSCresult)
+				SscvEssc = evaluate(SSCresult,ESSCresult)
+				print "SSC vs Ans",yvSSC
+				print "ESSC vs Ans",yvESSC
+				print "SSC vs ESSC",SscvEssc
 				print ""
 				sscfilename  = sscfilename  + "k"
 				esscfilename = esscfilename + "k"
+				if nul == 0:
+					YvSSC.append(yvSSC)
+					YvESSC.append(yvESSC)
+					SSCvESSC.append(SscvEssc)
+				else:
+					YvSSCk.append(yvSSC)
+					YvESSCk.append(yvESSC)
+					SSCvESSCk.append(SscvEssc)
+
 		elif os.path.exists("writing_"+filename):
 			continue
 		else:
@@ -965,12 +1044,136 @@ def mytrial3(args):
 					continue
 			runESSCSyn(argument)
 			runSSCSyn(argument)
-			compareESSCnSSCwithC(argument)
+			oldCompareESSCnSSCwithC(argument)
 			argument = ["",filename,subdire,filename+"k","k"]
 			runESSCSyn(argument)
 			runSSCSyn(argument)
-			compareESSCnSSCwithC(argument)
+			oldCompareESSCnSSCwithC(argument)
 			os.unlink("writing_"+filename)
+	m = len(sigmaList)
+	if len(YvESSCk) == m and len(YvSSCk) == m and len(YvESSC) == m and len(YvSSC) == m and m > 0:
+		import matplotlib.pyplot as plt
+		n = len(YvSSC[0])
+
+		plt.figure(1,figsize=(12, 9))
+		idx = 1
+		n1 = 0
+		for name in YvSSC[0]:
+			if n1 >= n/2:
+				break
+			inp = int("22"+str(idx))
+			ax = plt.subplot(inp)
+			x1 = [sigmaList[idx2][1] for idx2 in xrange(m)]
+			y1 = [YvSSC[idx2][name] for idx2 in xrange(m)]
+			x2 = [sigmaList[idx2][1] for idx2 in xrange(m)]
+			y2 = [YvESSC[idx2][name] for idx2 in xrange(m)]
+			x3 = [sigmaList[idx2][1] for idx2 in xrange(m)]
+			y3 = [SSCvESSC[idx2][name] for idx2 in xrange(m)]
+			ax.plot(x1,y1, color='r', linewidth=1.0, label='SSC v.s. Ans')
+			ax.plot(x2,y2, color='g', linewidth=1.0, label='ESSC v.s. Ans')
+			# ax.plot(x3,y3, color='b', linewidth=1.0)
+			# box = ax.get_position()
+			# ax.set_position([box.x0, box.y0 + box.height * 0.1,box.width, box.height * 0.9])
+			# ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05),fancybox=True, shadow=True, ncol=2, fontsize='x-small')
+			ax.legend()
+			plt.xlabel("sigma")
+			plt.ylabel(name)
+			# plt.title(name)
+			plt.grid(True)
+			idx = idx + 1
+			n1 = n1 + 1
+		plt.savefig("fig1.png")
+		plt.figure(2,figsize=(12, 9))
+		idx = 1
+		n1 = 0
+		for name in YvSSC[0]:
+			if n1 >= n/2:
+				break
+			inp = int("22"+str(idx))
+			ax = plt.subplot(inp)
+			x1 = [sigmaList[idx2][1] for idx2 in xrange(m)]
+			y1 = [YvSSCk[idx2][name] for idx2 in xrange(m)]
+			x2 = [sigmaList[idx2][1] for idx2 in xrange(m)]
+			y2 = [YvESSCk[idx2][name] for idx2 in xrange(m)]
+			x3 = [sigmaList[idx2][1] for idx2 in xrange(m)]
+			y3 = [SSCvESSCk[idx2][name] for idx2 in xrange(m)]
+			ax.plot(x1,y1, color='r', linewidth=1.0, label='SSC v.s. Ans')
+			ax.plot(x2,y2, color='g', linewidth=1.0, label='ESSC v.s. Ans')
+			# ax.plot(x3,y3, color='b', linewidth=1.0)
+			# box = ax.get_position()
+			# ax.set_position([box.x0, box.y0 + box.height * 0.1,box.width, box.height * 0.9])
+			# ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05),fancybox=True, shadow=True, ncol=2, fontsize='x-small')
+			ax.legend()
+			plt.xlabel("sigma")
+			plt.ylabel(name)
+			# plt.title(name)
+			plt.grid(True)
+			idx = idx + 1
+			n1 = n1 + 1
+		plt.savefig("fig2.png")
+		plt.figure(3,figsize=(12, 9))
+		idx = 1
+		n1 = 0
+		for name in YvSSC[0]:
+			if n1 < n/2:
+				n1 = n1 + 1
+				continue
+			inp = int("22"+str(idx))
+			ax = plt.subplot(inp)
+			x1 = [sigmaList[idx2][1] for idx2 in xrange(m)]
+			y1 = [YvSSC[idx2][name] for idx2 in xrange(m)]
+			x2 = [sigmaList[idx2][1] for idx2 in xrange(m)]
+			y2 = [YvESSC[idx2][name] for idx2 in xrange(m)]
+			x3 = [sigmaList[idx2][1] for idx2 in xrange(m)]
+			y3 = [SSCvESSC[idx2][name] for idx2 in xrange(m)]
+			ax.plot(x1,y1, color='r', linewidth=1.0, label='SSC v.s. Ans')
+			ax.plot(x2,y2, color='g', linewidth=1.0, label='ESSC v.s. Ans')
+			# ax.plot(x3,y3, color='b', linewidth=1.0)
+			# box = ax.get_position()
+			# ax.set_position([box.x0, box.y0 + box.height * 0.1,box.width, box.height * 0.9])
+			# ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05),fancybox=True, shadow=True, ncol=2, fontsize='x-small')
+			ax.legend()
+			plt.xlabel("sigma")
+			plt.ylabel(name)
+			# plt.title(name)
+			plt.grid(True)
+			idx = idx + 1
+			n1 = n1 + 1
+		plt.savefig("fig1k.png")
+		plt.figure(4,figsize=(12, 9))
+		idx = 1
+		n1 = 0
+		for name in YvSSC[0]:
+			if n1 < n/2:
+				n1 = n1 + 1
+				continue
+			inp = int("22"+str(idx))
+			ax = plt.subplot(inp)
+			x1 = [sigmaList[idx2][1] for idx2 in xrange(m)]
+			y1 = [YvSSCk[idx2][name] for idx2 in xrange(m)]
+			x2 = [sigmaList[idx2][1] for idx2 in xrange(m)]
+			y2 = [YvESSCk[idx2][name] for idx2 in xrange(m)]
+			x3 = [sigmaList[idx2][1] for idx2 in xrange(m)]
+			y3 = [SSCvESSCk[idx2][name] for idx2 in xrange(m)]
+			ax.plot(x1,y1, color='r', linewidth=1.0, label='SSC v.s. Ans')
+			ax.plot(x2,y2, color='g', linewidth=1.0, label='ESSC v.s. Ans')
+			# ax.plot(x3,y3, color='b', linewidth=1.0)
+			# box = ax.get_position()
+			# ax.set_position([box.x0, box.y0 + box.height * 0.1,box.width, box.height * 0.9])
+			# ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05),fancybox=True, shadow=True, ncol=2, fontsize='x-small')
+			ax.legend()
+			plt.xlabel("sigma")
+			plt.ylabel(name)
+			# plt.title(name)
+			plt.grid(True)
+			idx = idx + 1
+			n1 = n1 + 1
+		plt.savefig("fig2k.png")
+		# plt.show()
+
+
+
+
 def mytrial3a(args):
 	dire = "mytrial3a/"
 	sigmaList = [0.001,0.01,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
