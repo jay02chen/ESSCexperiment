@@ -206,7 +206,9 @@ def constructSR(X,zeroThreshold=0,aprxInf=9e+4):
 	for n in xrange(len(X)):
 		A = X
 		A = np.delete(A,n,axis=0)
+		w1 = l1qc(A.T,X[n],epsilon=np.float64(1.0))
 		w = solveL1NormWithRelaxation(matrix(A).T*aprxInf,matrix(X[n])*aprxInf)# Approximate to the l1-norm minimization with equality constraint
+		print w1,w
 		lambd = np.sqrt(2*np.sum(np.abs(np.array(w))))  # Estimate the dimension of subspace and find a proper lambda
 		w = solveL1NormWithRelaxation(matrix(A).T*lambd,matrix(X[n])*lambd)
 		for i in xrange(n):
