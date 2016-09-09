@@ -8,6 +8,7 @@ import io
 import os
 import threading
 import time
+from l1magic import l1qc_logbarrier as l1qc
 from l1regls import l1regls
 from sklearn.preprocessing import normalize
 from sklearn.cluster import KMeans
