@@ -236,7 +236,7 @@ def constructSR(X,zeroThreshold=0,aprxInf=9e+4,sigma=1e-4):
 		A = X
 		A = np.delete(A,n,axis=0)
 		w = l1qc(A.T,X[n],epsilon=np.float64(2)*sigma)
-		lambd = np.sqrt(2*norm(w))  # Estimate the dimension of subspace and find a proper lambda
+		lambd = np.sqrt(2*norm(w,1))  # Estimate the dimension of subspace and find a proper lambda
 		w = l1regls(matrix(A).T*lambd,matrix(X[n])*lambd)
 		for i in xrange(n):
 			if abs(w[i]) > zeroThreshold:
