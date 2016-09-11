@@ -548,8 +548,8 @@ def computeSSC_C_with_d(args):
 	X = np.array(X)
 	X = normalize(X,axis=1)
 	###
+	C = np.zeros((len(X),len(X))).tolist()
 	for n in xrange(len(X)):
-		C = np.zeros((len(A),len(A))).tolist()
 		lambd = np.sqrt(np.sqrt(d[y[n]])/2)
 		w = l1regls(matrix(np.delete(X,n,axis=0)).T*lambd,matrix(X[n])*lambd)
 		for i in xrange(n):
