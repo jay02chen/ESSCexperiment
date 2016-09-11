@@ -499,7 +499,7 @@ def computeESSC_C_with_d(args):
 		A = X[subsample]
 		C = np.zeros((len(A),len(A))).tolist()
 		for n in xrange(len(A)):
-			lambd = np.sqrt(np.sqrt(d[y[subsample[n]]])/2)  # Estimate the dimension of subspace and find a proper lambda
+			lambd = np.sqrt(np.sqrt(d[y[subsample[n]]])/2)
 			w = l1regls(matrix(np.delete(A,n,axis=0)).T*lambd,matrix(A[n])*lambd)
 			for j in xrange(n):
 				C[n][j] = w[j]
@@ -525,6 +525,42 @@ def computeSSC_C(args):
 		X = X[0]
 	X = np.array(X)
 	X = normalize(X,axis=1)
+	C = constructSR(X,zeroThreshold=0,aprxInf=9e+4)
+	with open(outfile,'w+') as f:
+		json.dump(C,f)
+	C = None
+	return True
+
+def computeSSC_C_with_d(args):
+	infile = args[1]
+	outdire = args[2]
+	# infile = "s"+str(i)+"dat"
+	outfile = outdire+"SR_"+infile
+	if os.path.exists(outfile):
+		return False
+	with open(infile,'r') as f:
+		X = json.load(f)
+		y = buf[1]
+		d = buf[3][1]
+		X = buf[0]
+	buf = None
+	X = np.array(X)
+	X = normalize(X,axis=1)
+	###
+	C = np.zeros((len(X),len(X)))
+	print "sigma = %f\n"%(sigma)
+	for n in xrange(len(X)):
+		lambd = np.sqrt(np.sqrt(d[y[n]])/2)
+		w = l1regls(matrix(np.delete(X,n,axis=0)).T*lambd,matrix(X[n])*lambd)
+		for i in xrange(n):
+			if abs(w[i]) > zeroThreshold:
+				C[n][i] = w[i]
+		for i in xrange(n,len(w)):
+			if abs(w[i]) > zeroThreshold:
+				C[n][i+1] = w[i]
+		print n,(2*lambd**2)**2 #print index and dimension of subspace
+	return C.tolist()
+	###
 	C = constructSR(X,zeroThreshold=0,aprxInf=9e+4)
 	with open(outfile,'w+') as f:
 		json.dump(C,f)
@@ -789,11 +825,11 @@ def mytrial3(args):
 				if int(f.readline()) != os.getpid():
 					continue
 			computeESSC_C_with_d(argument)
-			computeSSC_C(argument)
+			computeSSC_C_with_d(argument)
 			CompareESSCnSSCwithC(argument)
 			argument = ["",filename,subdire,filename+"k","k"]
 			computeESSC_C_with_d(argument)
-			computeSSC_C(argument)
+			computeSSC_C_with_d(argument)
 			CompareESSCnSSCwithC(argument)
 			os.unlink("writing_"+filename)
 	##
