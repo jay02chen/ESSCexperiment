@@ -520,12 +520,27 @@ def computeSSC_C(args):
 	if os.path.exists(outfile):
 		return False
 	with open(infile,'r') as f:
-		X = json.load(f)
-		y = X[1]
-		X = X[0]
+		buf = json.load(f)
+		y = buf[1]
+		d = buf[3][1]
+		X = buf[0]
+	buf = None
 	X = np.array(X)
 	X = normalize(X,axis=1)
-	C = constructSR(X,zeroThreshold=0,aprxInf=9e+4)
+	###
+	print "sigma = %f\n"%(sigma)
+	for n in xrange(len(X)):
+		C = np.zeros((len(A),len(A))).tolist()
+		lambd = np.sqrt(np.sqrt(d[y[n]])/2)
+		w = l1regls(matrix(np.delete(X,n,axis=0)).T*lambd,matrix(X[n])*lambd)
+		for i in xrange(n):
+			if abs(w[i]) > zeroThreshold:
+				C[n][i] = w[i]
+		for i in xrange(n,len(w)):
+			if abs(w[i]) > zeroThreshold:
+				C[n][i+1] = w[i]
+		print n,(2*lambd**2)**2 #print index and dimension of subspace
+	###
 	with open(outfile,'w+') as f:
 		json.dump(C,f)
 	C = None
@@ -547,9 +562,9 @@ def computeSSC_C_with_d(args):
 	X = np.array(X)
 	X = normalize(X,axis=1)
 	###
-	C = np.zeros((len(X),len(X)))
 	print "sigma = %f\n"%(sigma)
 	for n in xrange(len(X)):
+		C = np.zeros((len(A),len(A))).tolist()
 		lambd = np.sqrt(np.sqrt(d[y[n]])/2)
 		w = l1regls(matrix(np.delete(X,n,axis=0)).T*lambd,matrix(X[n])*lambd)
 		for i in xrange(n):
@@ -559,9 +574,7 @@ def computeSSC_C_with_d(args):
 			if abs(w[i]) > zeroThreshold:
 				C[n][i+1] = w[i]
 		print n,(2*lambd**2)**2 #print index and dimension of subspace
-	return C.tolist()
 	###
-	C = constructSR(X,zeroThreshold=0,aprxInf=9e+4)
 	with open(outfile,'w+') as f:
 		json.dump(C,f)
 	C = None
@@ -678,9 +691,9 @@ def CompareESSCnSSCwithC(args):
 			with open(indire+str(i),'r') as f:
 				C = json.load(f)
 		else: C = constructSR(X[subsample],zeroThreshold=0,aprxInf=9e+4)
-		for c1 in xrange(len(subsample)):
-			for c2 in xrange(len(subsample)):
-				CSPA_C[subsample[c1]][subsample[c2]] = CSPA_C[subsample[c1]][subsample[c2]] + C[c1][c2]
+		# for c1 in xrange(len(subsample)):
+		# 	for c2 in xrange(len(subsample)):
+		# 		bootstrap_C[subsample[c1]][subsample[c2]] = bootstrap_C[subsample[c1]][subsample[c2]] + C[c1][c2]
 		subK = len(set([y[j] for j in subsample]))
 		if K == -1:
 			subK = -1
@@ -704,8 +717,7 @@ def CompareESSCnSSCwithC(args):
 	for i in xrange(len(X)):
 		G.add_node(i)
 	for edge in A:
-		CSPA_C[edge[0],edge[1]] = CSPA_C[edge[0],edge[1]] / Weight[edge]
-		CSPA_C[edge[1],edge[0]] = CSPA_C[edge[1],edge[0]] / Weight[edge]
+		CSPA_C[edge[0],edge[1]] = np.float64(A[edge]) / Weight[edge]
 		if A[edge]*2 >= Weight[edge]:  		#majority voting
 			G.add_edge(edge[0],edge[1])
 	A = None
@@ -741,8 +753,8 @@ def CompareESSCnSSCwithC(args):
 
 def mytrial3(args):
 	dire = args[1]+"/"
-	#sigmaList = [0.001,0.01,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
-	sigmaList = np.linspace(0.01,1,100)
+	sigmaList = [0.001,0.01,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
+	# sigmaList = np.linspace(0.01,1,100)
 	sigmaList = sorted(zip(range(len(sigmaList)),sigmaList),key=lambda x:x[1])
 	if (len(args) > 2 and args[2] == "redo") or not os.path.exists(dire):
 		print "regenerating synthetic data..."
@@ -897,7 +909,7 @@ def mytrial3(args):
 			plt.grid(True)
 			idx = idx + 1
 			n1 = n1 + 1
-		plt.savefig("fig2.png")
+		plt.savefig("fig1k.png")
 		plt.figure(3,figsize=(12, 9))
 		idx = 1
 		n1 = 0
@@ -926,7 +938,7 @@ def mytrial3(args):
 			plt.grid(True)
 			idx = idx + 1
 			n1 = n1 + 1
-		plt.savefig("fig1k.png")
+		plt.savefig("fig2.png")
 		plt.figure(4,figsize=(12, 9))
 		idx = 1
 		n1 = 0
@@ -956,7 +968,7 @@ def mytrial3(args):
 			idx = idx + 1
 			n1 = n1 + 1
 		plt.savefig("fig2k.png")
-		# plt.show()
+		plt.show()
 
 
 if __name__ == "__main__":
