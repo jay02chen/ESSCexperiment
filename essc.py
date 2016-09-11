@@ -705,7 +705,8 @@ def CompareESSCnSSCwithC(args):
 
 def mytrial3(args):
 	dire = args[1]+"/"
-	sigmaList = [0.001,0.01,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
+	#sigmaList = [0.001,0.01,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
+	sigmaList = np.linspace(0.01,1,100)
 	sigmaList = sorted(zip(range(len(sigmaList)),sigmaList),key=lambda x:x[1])
 	if (len(args) > 2 and args[2] == "redo") or not os.path.exists(dire):
 		print "regenerating synthetic data..."
