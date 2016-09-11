@@ -151,10 +151,11 @@ def trial_FDdistribution(args):
 			distr = []
 			enum = 0
 			for t in xrange(Trials):
+				print sigma,exp,t
 				X,y,Base,meta = syntheticGenerator(n=10,d=Dimension,N=Points,sigma=sigma,orthonormal=True)
 				xi = X[0]
 				X_mi = X[1:,:]
-				lambd = np.float64(1)/sqrt(Dimension[y[0]])
+				lambd = sqrt(Dimension[y[0]])
 				lambd = sqrt(0.5*lambd)
 				c = l1regls(matrix(X_mi).T*lambd,matrix(xi)*lambd)
 				c = np.array(c).reshape(-1)
