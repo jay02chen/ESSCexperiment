@@ -553,11 +553,9 @@ def computeSSC_C_with_d(args):
 		lambd = np.sqrt(np.sqrt(d[y[n]])/2)
 		w = l1regls(matrix(np.delete(X,n,axis=0)).T*lambd,matrix(X[n])*lambd)
 		for i in xrange(n):
-			if abs(w[i]) > zeroThreshold:
-				C[n][i] = w[i]
+			C[n][i] = w[i]
 		for i in xrange(n,len(w)):
-			if abs(w[i]) > zeroThreshold:
-				C[n][i+1] = w[i]
+			C[n][i+1] = w[i]
 		print n,(2*lambd**2)**2 #print index and dimension of subspace
 	###
 	with open(outfile,'w+') as f:
@@ -738,8 +736,9 @@ def CompareESSCnSSCwithC(args):
 
 def mytrial3(args):
 	dire = args[1]+"/"
-	sigmaList = [0.001,0.01,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
-	# sigmaList = np.linspace(0.01,1,100)
+	# sigmaList = [0.001,0.01,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
+	num_point = 200
+	sigmaList = np.linspace(np.float64(1)/num_point,1,num_point)
 	sigmaList = sorted(zip(range(len(sigmaList)),sigmaList),key=lambda x:x[1])
 	if (len(args) > 2 and args[2] == "redo") or not os.path.exists(dire):
 		print "regenerating synthetic data..."
