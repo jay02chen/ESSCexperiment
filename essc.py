@@ -237,7 +237,8 @@ def constructSR(X,zeroThreshold=0,aprxInf=9e+4,sigma=1e-4):
 	for n in xrange(len(X)):
 		A = X
 		A = np.delete(A,n,axis=0)
-		w = l1qc(A.T,X[n],epsilon=np.float64(2)*sigma)
+		w = l1regls(matrix(A).T*aprxInf,matrix(X[n])*aprxInf)
+		# w = l1qc(A.T,X[n],epsilon=np.float64(2)*sigma)
 		lambd = np.sqrt(2*norm(w,1))  # Estimate the dimension of subspace and find a proper lambda
 		w = l1regls(matrix(A).T*lambd,matrix(X[n])*lambd)
 		for i in xrange(n):
@@ -451,171 +452,7 @@ def ensembleSparseSubspaceClustering(X,filename="",numThreads=16,zeroThreshold=0
 		json.dump(result,f)
 	return result
 
-def projDist(a,X):
-	D = dict()
-	for i in xrange(len(a)):
-		if a[i] not in D:
-			D[a[i]] = []
-		D[a[i]].append(X[i])
-	s = 0.
-	for d in D:
-		a = PCA()
-def countNonzero(v,zeroThreshold=0):
-	"""
-	Count the number of non-zero components of the vector v
-	"""
-	s = 0
-	for e in v:
-		if abs(e) > zeroThreshold:
-			s = s + 1
-	return s
-
-def genSyn(args):
-	###########################
-	##Generate Synthetic Data##
-	###########################
-	"""#Synthetic 1
-	X,y,Base = syntheticGenerator(n=100,d=[2,3],N=[1000,3000],sigma=0.1,orthonormal=False)
-	filename = "s1dat"
-	with open(filename,'w+') as f:
-		json.dump([X.tolist(),y.tolist(),Base],f)
-	scc_result = sparseSubspaceClustering(X,filename,numThreads=1)
-	print evaluate(y,scc_result)
-	ens_result = ensembleSparseSubspaceClustering(X,filename,numThreads=1)
-	print evaluate(y,ens_result)
-	"""
-	"""#Synthetic 2
-	X,y,Base = syntheticGenerator(n=100,d=[2,3,2],N=[180,200,600],sigma=0.1,orthonormal=False)
-	filename = "s2dat"
-	with open(filename,'w+') as f:
-		json.dump([X.tolist(),y.tolist(),Base],f)
-	"""
-	"""#Synthetic 3
-	X,y,Base = syntheticGenerator(n=100,d=[2,3,2],N=[50,90,450],sigma=0.1,orthonormal=False)
-	filename = "s3dat"
-	with open(filename,'w+') as f:
-		json.dump([X.tolist(),y.tolist(),Base],f)
-	"""
-	"""#Synthetic 4
-	X,y,Base = syntheticGenerator(n=10,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=0.01,orthonormal=False)
-	filename = "s4dat"
-	with open(filename,'w+') as f:
-		json.dump([X.tolist(),y.tolist(),Base],f)
-	"""
-	"""#Synthetic 5
-	X,y,Base = syntheticGenerator(n=10,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=0.1,orthonormal=False)
-	filename = "s5dat"
-	with open(filename,'w+') as f:
-		json.dump([X.tolist(),y.tolist(),Base],f)
-	"""
-	"""#Synthetic 6
-	X,y,Base = syntheticGenerator(n=10,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=0.3,orthonormal=False)
-	filename = "s6dat"
-	with open(filename,'w+') as f:
-		json.dump([X.tolist(),y.tolist(),Base],f)
-	"""
-	"""#Synthetic 7
-	X,y,Base = syntheticGenerator(n=10,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=0.5,orthonormal=False)
-	filename = "s7dat"
-	with open(filename,'w+') as f:
-		json.dump([X.tolist(),y.tolist(),Base],f)
-	"""
-	"""#Synthetic 8
-	X,y,Base = syntheticGenerator(n=10,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=0.8,orthonormal=False)
-	filename = "s8dat"
-	with open(filename,'w+') as f:
-		json.dump([X.tolist(),y.tolist(),Base],f)
-	"""
-	"""#Synthetic 9
-	X,y,Base = syntheticGenerator(n=10,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=1.0,orthonormal=False)
-	filename = "s9dat"
-	with open(filename,'w+') as f:
-		json.dump([X.tolist(),y.tolist(),Base],f)
-	"""
-	"""#Synthetic 10
-	X,y,Base = syntheticGenerator(n=50,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=0.01,orthonormal=False)
-	filename = "s10dat"
-	with open(filename,'w+') as f:
-		json.dump([X.tolist(),y.tolist(),Base],f)
-	"""
-	"""#Synthetic 11
-	X,y,Base = syntheticGenerator(n=50,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=0.1,orthonormal=False)
-	filename = "s11dat"
-	with open(filename,'w+') as f:
-		json.dump([X.tolist(),y.tolist(),Base],f)
-	"""
-	"""#Synthetic 12
-	X,y,Base = syntheticGenerator(n=50,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=0.3,orthonormal=False)
-	filename = "s12dat"
-	with open(filename,'w+') as f:
-		json.dump([X.tolist(),y.tolist(),Base],f)
-	"""
-	"""#Synthetic 13
-	X,y,Base = syntheticGenerator(n=50,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=0.5,orthonormal=False)
-	filename = "s13dat"
-	with open(filename,'w+') as f:
-		json.dump([X.tolist(),y.tolist(),Base],f)
-	"""
-	"""#Synthetic 14
-	X,y,Base = syntheticGenerator(n=50,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=0.8,orthonormal=False)
-	filename = "s14dat"
-	with open(filename,'w+') as f:
-		json.dump([X.tolist(),y.tolist(),Base],f)
-	"""
-	"""#Synthetic 15
-	X,y,Base = syntheticGenerator(n=50,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=1.0,orthonormal=False)
-	filename = "s15dat"
-	with open(filename,'w+') as f:
-		json.dump([X.tolist(),y.tolist(),Base],f)
-	"""
-	"""#Synthetic 16
-	X,y,Base = syntheticGenerator(n=20,d=[2,3,2,6,3,2],N=[40,10,60,30,40,120],sigma=0.01,orthonormal=False)
-	filename = "s16dat"
-	with open(filename,'w+') as f:
-		json.dump([X.tolist(),y.tolist(),Base],f)
-	"""
-	"""#Synthetic 17
-	X,y,Base = syntheticGenerator(n=20,d=[2,3,2,6,3,2],N=[40,10,60,30,40,120],sigma=0.1,orthonormal=False)
-	filename = "s17dat"
-	with open(filename,'w+') as f:
-		json.dump([X.tolist(),y.tolist(),Base],f)
-	"""
-	"""#Synthetic 18
-	X,y,Base = syntheticGenerator(n=20,d=[2,3,2,6,3,2],N=[40,10,60,30,40,120],sigma=0.3,orthonormal=False)
-	filename = "s18dat"
-	with open(filename,'w+') as f:
-		json.dump([X.tolist(),y.tolist(),Base],f)
-	"""
-	"""#Synthetic 19
-	X,y,Base = syntheticGenerator(n=20,d=[2,3,2,6,3,2],N=[40,10,60,30,40,120],sigma=0.5,orthonormal=False)
-	filename = "s19dat"
-	with open(filename,'w+') as f:
-		json.dump([X.tolist(),y.tolist(),Base],f)
-	"""
-	"""#Synthetic 20
-	X,y,Base = syntheticGenerator(n=20,d=[2,3,2,6,3,2],N=[40,10,60,30,40,120],sigma=0.8,orthonormal=False)
-	filename = "s20dat"
-	with open(filename,'w+') as f:
-		json.dump([X.tolist(),y.tolist(),Base],f)
-	"""
-	"""#Synthetic 21
-	X,y,Base = syntheticGenerator(n=20,d=[2,3,2,6,3,2],N=[40,10,60,30,40,120],sigma=1.0,orthonormal=False)
-	filename = "s21dat"
-	with open(filename,'w+') as f:
-		json.dump([X.tolist(),y.tolist(),Base],f)
-	"""
-	"""#Synthetic 22
-	X,y,Base = syntheticGenerator(n=20,d=[3,3,3,3,3,3],N=[40,10,60,30,40,120],sigma=1.0,orthonormal=False)
-	filename = "s22dat"
-	with open(filename,'w+') as f:
-		json.dump([X.tolist(),y.tolist(),Base],f)
-	"""
-	return True
-
-def runESSCSyn(args):
-	"""
-	run/generate the synthetic data
-	"""
+def computeESSC_C(args):
 	infile = args[1]
 	outdire = args[2]
 
@@ -638,7 +475,44 @@ def runESSCSyn(args):
 			json.dump(C,f)
 		C = None
 
-def runSSCSyn(args):
+def computeESSC_C_with_d(args):
+	infile = args[1]
+	outdire = args[2]
+
+	# X = parseCMUMotionData(file)
+	with open(infile,'r') as f:
+		buf = json.load(f)
+		y = buf[1]
+		d = buf[3][1]
+		X = buf[0]
+	buf = None
+	X = np.array(X)
+	X = normalize(X,axis=1)
+	subSamples = subSampling(range(len(X)))
+	for i in xrange(len(subSamples)):
+		if os.path.exists(outdire+str(i)):
+			continue
+		subsample = subSamples[i]
+		print i,len(subSamples),len(subsample)
+		solvers.options['show_progress'] = False
+		##
+		A = X[subsample]
+		C = np.zeros((len(A),len(A))).tolist()
+		for n in xrange(len(A)):
+			lambd = np.sqrt(np.sqrt(d[y[subsample[n]]])/2)  # Estimate the dimension of subspace and find a proper lambda
+			w = l1regls(matrix(np.delete(A,n,axis=0)).T*lambd,matrix(X[n])*lambd)
+			for j in xrange(n):
+				C[n][j] = w[j]
+			for j in xrange(n,len(w)):
+				C[n][j+1] = w[j]
+			print n,(2*lambd**2)**2 #print index and dimension of subspace
+		##
+		with open(outdire+str(i),'w+') as f:
+			json.dump(C,f)
+		C = None
+
+
+def computeSSC_C(args):
 	infile = args[1]
 	outdire = args[2]
 	# infile = "s"+str(i)+"dat"
@@ -743,72 +617,7 @@ def CMUs86t5Label():
 		benchmark[i] = 0
 	return benchmark
 
-def experimentOnC(args):
-	ensembleSparseSubspaceClustering(X,filename,numThreads=1,zeroThreshold=0,aprxInf=9e+4)
-	sparseSubspaceClustering(X,filename,numThreads=1,zeroThreshold=0,aprxInf=9e+4)
-
-def compareESSCnSSCwithC(args):
-	infile = args[1]
-	indire = args[2]
-	outfile = args[3]
-	SRinfile = indire+"SR_"+infile
-	with open(infile,'r') as f:
-		X = json.load(f)
-		y = X[1]
-		X = X[0]
-	if len(args) > 4 and (args[4] == "k" or args[4] == "K"):
-		K = len(set(y))
-	else: K = -1
-	print "K = ",K
-	X = np.array(X)
-	X = normalize(X,axis=1)
-	A = np.zeros((len(X),len(X)))
-	subSamples = subSampling(range(len(X)))
-	Weight = dict()
-	for i in xrange(len(subSamples)):
-		subsample = subSamples[i]
-		if os.path.exists(indire+str(i)):
-			with open(indire+str(i),'r') as f:
-				C = json.load(f)
-		else: C = constructSR(X[subsample],zeroThreshold=0,aprxInf=9e+4)
-		for j in xrange(len(subsample)):
-			for k in xrange(j+1,len(subsample)):
-				i1 = min(subsample[j],subsample[k])
-				i2 = max(subsample[j],subsample[k])
-				A[i1][i2] = A[i1][i2] + C[j][k]
-				if (i1,i2) not in Weight:
-					Weight[i1,i2] = 1
-				else: Weight[i1,i2] = Weight[i1,i2] + 1
-	for j in xrange(len(X)):
-		for k in xrange(i+1,len(X)):
-			A[j][k] = A[j][k]/Weight[i1,i2]
-
-	ESSCresult = spectralClusteringwithL(getLaplacian(A),K)
-	if os.path.exists(SRinfile):
-		with open(SRinfile,'r') as f:
-			C = json.load(f)
-	else:
-		with open(infile,'r') as f:
-			X = json.load(f)
-			y = X[1]
-			X = X[0]
-		X = np.array(X)
-		X = normalize(X,axis=1)
-		C = constructSR(X,zeroThreshold=0,aprxInf=9e+4)
-	SSCresult = spectralClusteringWithL(getLaplacian(C),K)
-	#SSCresult = spectralClustering(constructAffinityGraph(C),K)
-	with open(indire+"SSCres_"+outfile,'w+') as f:
-		json.dump(SSCresult,f)
-	with open(indire+"newESSCres_"+outfile,'w+') as f:
-		json.dump(ESSCresult,f)
-	print "SSC",SSCresult
-	print "ESSC",ESSCresult
-	print "Ans",y
-	print "SSC vs Ans",evaluate(y,SSCresult)
-	print "ESSC vs Ans",evaluate(y,ESSCresult)
-	print "SSC vs ESSC",evaluate(SSCresult,ESSCresult)
-
-def oldCompareESSCnSSCwithC(args):
+def CompareESSCnSSCwithC(args):
 	infile = args[1]
 	indire = args[2]
 	outfile = args[3]
@@ -826,12 +635,16 @@ def oldCompareESSCnSSCwithC(args):
 	subSamples = subSampling(range(len(X)))
 	A = dict()
 	Weight = dict()
+	CSPA_C = np.zeros((len(X),len(X)))
 	for i in xrange(len(subSamples)):
 		subsample = subSamples[i]
 		if os.path.exists(indire+str(i)):
 			with open(indire+str(i),'r') as f:
 				C = json.load(f)
 		else: C = constructSR(X[subsample],zeroThreshold=0,aprxInf=9e+4)
+		for c1 in xrange(len(subsample)):
+			for c2 in xrange(len(subsample)):
+				CSPA_C[subsample[c1]][subsample[c2]] = CSPA_C[subsample[c1]][subsample[c2]] + C[c1][c2]
 		subK = len(set([y[j] for j in subsample]))
 		if K == -1:
 			subK = -1
@@ -855,10 +668,13 @@ def oldCompareESSCnSSCwithC(args):
 	for i in xrange(len(X)):
 		G.add_node(i)
 	for edge in A:
+		CSPA_C[edge[0],edge[1]] = CSPA_C[edge[0],edge[1]] / Weight[edge]
+		CSPA_C[edge[1],edge[0]] = CSPA_C[edge[1],edge[0]] / Weight[edge]
 		if A[edge]*2 >= Weight[edge]:  		#majority voting
 			G.add_edge(edge[0],edge[1])
 	A = None
 	ESSCresult = spectralClustering(G,K)
+	CSPAresult = spectralClusteringWithL(getLaplacian(CSPA_C),K)
 	if os.path.exists(SRinfile):
 		with open(SRinfile,'r') as f:
 			C = json.load(f)
@@ -876,15 +692,19 @@ def oldCompareESSCnSSCwithC(args):
 		json.dump(SSCresult,f)
 	with open(indire+"ESSCres_"+outfile,'w+') as f:
 		json.dump(ESSCresult,f)
+	with open(indire+"CSPAres_"+outfile,'w+') as f:
+		json.dump(CSPAresult,f)
 	print "SSC",SSCresult
 	print "ESSC",ESSCresult
+	print "CSPA",CSPAresult
 	print "Ans",y
 	print "SSC vs Ans",evaluate(y,SSCresult)
 	print "ESSC vs Ans",evaluate(y,ESSCresult)
+	print "CSPA vs Ans",evaluate(y,CSPAresult)
 	print "SSC vs ESSC",evaluate(SSCresult,ESSCresult)
 
 def mytrial3(args):
-	dire = "mytrial3/"
+	dire = args[1]+"/"
 	sigmaList = [0.001,0.01,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
 	sigmaList = sorted(zip(range(len(sigmaList)),sigmaList),key=lambda x:x[1])
 	if (len(args) > 2 and args[2] == "redo") or not os.path.exists(dire):
@@ -898,15 +718,17 @@ def mytrial3(args):
 		else: os.mkdir(dire)
 	for i, sigma in sigmaList:
 		if not os.path.exists(dire+str(i)+"dat"):
-			X,y,Base = syntheticGenerator(n=20,d=[3,3,3,3,3,3],N=[40,10,60,30,40,120],sigma=sigma,orthonormal=True)
+			X,y,Base,meta = syntheticGenerator(n=20,d=[3,3,3,3,3,3],N=[40,10,60,30,40,120],sigma=sigma,orthonormal=True)
 			with open(dire+str(i)+"dat",'w+') as f:
-				json.dump([X.tolist(),y.tolist(),Base],f)
+				json.dump([X.tolist(),y.tolist(),Base,meta],f)
 	os.chdir(dire)
 	YvESSC = []
 	YvSSC = []
 	SSCvESSC = []
+	YvCSPA = []
 	YvESSCk = []
 	YvSSCk = []
+	YvCSPAk = []
 	SSCvESSCk = []
 	for i, sigma in sigmaList:
 		subdire = "s"+str(i)+"/"
@@ -916,14 +738,17 @@ def mytrial3(args):
 		argument = ["",filename,subdire,filename]
 		sscfilename  = subdire+"SSCres_"+filename
 		esscfilename = subdire+"ESSCres_"+filename
+		cspafilename = subdire+"CSPAres_"+filename
 		print ""
 		print filename,":\tsigma = ",sigma
-		if len(args) == 2 and os.path.exists(sscfilename) and os.path.exists(esscfilename):
+		if len(args) == 2 and os.path.exists(sscfilename) and os.path.exists(esscfilename) and os.path.exists(cspafilename):
 			for nul in xrange(2):
 				with open(sscfilename,'r') as f:
 					SSCresult = json.load(f)
 				with open(esscfilename,'r') as f:
 					ESSCresult = json.load(f)
+				with open(cspafilename,'r') as f:
+					CSPAresult = json.load(f)
 				with open(filename,'r') as f:
 					tempX = json.load(f)
 					y = tempX[1]
@@ -933,20 +758,25 @@ def mytrial3(args):
 				# print "Ans",y
 				yvSSC = evaluate(y,SSCresult)
 				yvESSC = evaluate(y,ESSCresult)
+				yvCSPA = evaluate(y,CSPAresult)
 				SscvEssc = evaluate(SSCresult,ESSCresult)
 				print "SSC vs Ans",yvSSC
 				print "ESSC vs Ans",yvESSC
+				print "CSPA vs Ans",yvCSPA
 				print "SSC vs ESSC",SscvEssc
 				print ""
 				sscfilename  = sscfilename  + "k"
 				esscfilename = esscfilename + "k"
+				cspafilename = cspafilename + "k"
 				if nul == 0:
 					YvSSC.append(yvSSC)
 					YvESSC.append(yvESSC)
+					YvCSPA.append(yvCSPA)
 					SSCvESSC.append(SscvEssc)
 				else:
 					YvSSCk.append(yvSSC)
 					YvESSCk.append(yvESSC)
+					YvCSPAk.append(yvCSPA)
 					SSCvESSCk.append(SscvEssc)
 
 		elif os.path.exists("writing_"+filename):
@@ -957,14 +787,19 @@ def mytrial3(args):
 			with open("writing_"+filename,'r') as f:
 				if int(f.readline()) != os.getpid():
 					continue
-			# runESSCSyn(argument)
-			# runSSCSyn(argument)
-			oldCompareESSCnSSCwithC(argument)
+			computeESSC_C_with_d(argument)
+			computeSSC_C(argument)
+			CompareESSCnSSCwithC(argument)
 			argument = ["",filename,subdire,filename+"k","k"]
-			# runESSCSyn(argument)
-			# runSSCSyn(argument)
-			oldCompareESSCnSSCwithC(argument)
+			computeESSC_C_with_d(argument)
+			computeSSC_C(argument)
+			CompareESSCnSSCwithC(argument)
 			os.unlink("writing_"+filename)
+	##
+	##
+	## Draw
+	##
+	##
 	m = len(sigmaList)
 	if len(YvESSCk) == m and len(YvSSCk) == m and len(YvESSC) == m and len(YvSSC) == m and m > 0:
 		import matplotlib.pyplot as plt
@@ -1087,212 +922,6 @@ def mytrial3(args):
 		# plt.show()
 
 
-
-
-def mytrial3a(args):
-	dire = "mytrial3a/"
-	sigmaList = [0.001,0.01,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
-	sigmaList.extend([0.0001,0.05,0.15,0.25,0.35,0.45,0.55,0.65,0.75,0.85,0.95])
-	sigmaList.extend([0.05,0.075,0.125,0.175,0.225,0.275,0.325,0.375,0.425,0.475])
-	sigmaList = sorted(zip(range(len(sigmaList)),sigmaList),key=lambda x:x[1])
-	if (len(args) > 2 and args[2] == "redo") or not os.path.exists(dire):
-		print "regenerating synthetic data..."
-		if os.path.exists(dire):
-			for root, dirs, files in os.walk(dire, topdown=False):
-				for name in files:
-					os.remove(os.path.join(root, name))
-				for name in dirs:
-					os.rmdir(os.path.join(root, name))
-		else: os.mkdir(dire)
-	for i, sigma in sigmaList:
-		if not os.path.exists(dire+str(i)+"dat"):
-			X,y,Base = syntheticGenerator(n=20,d=[3,3,3,3,3,3],N=[40,10,60,30,40,120],sigma=sigma,orthonormal=True)
-			with open(dire+str(i)+"dat",'w+') as f:
-				json.dump([X.tolist(),y.tolist(),Base],f)
-	os.chdir(dire)
-	for i, sigma in sigmaList:
-		subdire = "s"+str(i)+"/"
-		if not os.path.exists(subdire):
-			os.mkdir(subdire)
-		filename = str(i)+"dat"
-		argument = ["",filename,subdire,filename]
-		sscfilename  = subdire+"SSCres_"+filename
-		esscfilename = subdire+"ESSCres_"+filename
-		print ""
-		print filename,":\tsigma = ",sigma
-
-		if len(args) == 2 and os.path.exists(sscfilename) and os.path.exists(esscfilename):
-			for nul in xrange(2):
-				with open(sscfilename,'r') as f:
-					SSCresult = json.load(f)
-				with open(esscfilename,'r') as f:
-					ESSCresult = json.load(f)
-				with open(filename,'r') as f:
-					tempX = json.load(f)
-					y = tempX[1]
-					tempX = None
-				# print "SSC",SSCresult
-				# print "ESSC",ESSCresult
-				# print "Ans",y
-				score_SSC = evaluate(y,SSCresult)
-				score_ESSC = evaluate(y,ESSCresult)
-				print "SSC vs Ans", score_SSC 
-				print "ESSC vs Ans", score_ESSC
-				print "SSC vs ESSC",evaluate(SSCresult,ESSCresult)
-				print ""
-				sscfilename  = sscfilename  + "k"
-				esscfilename = esscfilename + "k"
-		elif os.path.exists("writing_"+filename):
-			continue
-		else:
-			with open("writing_"+filename,'w+') as f:
-				f.write("%d"%(os.getpid()))
-			with open("writing_"+filename,'r') as f:
-				if int(f.readline()) != os.getpid():
-					continue
-			runESSCSyn(argument)
-			runSSCSyn(argument)
-			compareESSCnSSCwithC(argument)
-			argument = ["",filename,subdire,filename+"k","k"]
-			runESSCSyn(argument)
-			runSSCSyn(argument)
-			compareESSCnSSCwithC(argument)
-			os.unlink("writing_"+filename)
-
-def mytrial4(args):
-	dire = "mytrial4/"
-	sigmaList = [0.001,0.01,0.1,1.0]
-	sigmaList = sorted(zip(range(len(sigmaList)),sigmaList),key=lambda x:x[1])
-	if (len(args) > 2 and args[2] == "redo") or not os.path.exists(dire):
-		print "regenerating synthetic data..."
-		if os.path.exists(dire):
-			for root, dirs, files in os.walk(dire, topdown=False):
-				for name in files:
-					os.remove(os.path.join(root, name))
-				for name in dirs:
-					os.rmdir(os.path.join(root, name))
-		else: os.mkdir(dire)
-	for i, sigma in sigmaList:
-		if not os.path.exists(dire+str(i)+"dat"):
-			X,y,Base = syntheticGenerator(n=20,d=[2,3,2,6,3,2],N=[400,100,600,300,400,1200],sigma=sigma,orthonormal=True)
-			with open(dire+str(i)+"dat",'w+') as f:
-				json.dump([X.tolist(),y.tolist(),Base],f)
-	os.chdir(dire)
-	for i, sigma in sigmaList:
-		subdire = "s"+str(i)+"/"
-		if not os.path.exists(subdire):
-			os.mkdir(subdire)
-		filename = str(i)+"dat"
-		argument = ["",filename,subdire,filename]
-		sscfilename  = subdire+"SSCres_"+filename
-		esscfilename = subdire+"ESSCres_"+filename
-		print ""
-		print filename,":\tsigma = ",sigma
-		if len(args) == 2 and os.path.exists(sscfilename) and os.path.exists(esscfilename):
-			for nul in xrange(2):
-				with open(sscfilename,'r') as f:
-					SSCresult = json.load(f)
-				with open(esscfilename,'r') as f:
-					ESSCresult = json.load(f)
-				with open(filename,'r') as f:
-					tempX = json.load(f)
-					y = tempX[1]
-					tempX = None
-				# print "SSC",SSCresult
-				# print "ESSC",ESSCresult
-				# print "Ans",y
-				print "SSC vs Ans",evaluate(y,SSCresult)
-				print "ESSC vs Ans",evaluate(y,ESSCresult)
-				print "SSC vs ESSC",evaluate(SSCresult,ESSCresult)
-				print ""
-				sscfilename  = sscfilename  + "k"
-				esscfilename = esscfilename + "k"
-		elif os.path.exists("writing_"+filename):
-			continue
-		else:
-			with open("writing_"+filename,'w+') as f:
-				f.write("%d"%(os.getpid()))
-			with open("writing_"+filename,'r') as f:
-				if int(f.readline()) != os.getpid():
-					continue
-			runESSCSyn(argument)
-			runSSCSyn(argument)
-			compareESSCnSSCwithC(argument)
-			argument = ["",filename,subdire,filename+"k","k"]
-			runESSCSyn(argument)
-			runSSCSyn(argument)
-			compareESSCnSSCwithC(argument)
-			#os.unlink("writing_"+filename)
-			with open("finish_"+filename,'w+') as f:
-				f.write("%d"%(os.getpid()))
-
-def mytrial5(args):
-	dire = "mytrial5/"
-	sigmaList = [0.001,0.01,0.1,1.0]
-	sigmaList = sorted(zip(range(len(sigmaList)),sigmaList),key=lambda x:x[1])
-	if (len(args) > 2 and args[2] == "redo") or not os.path.exists(dire):
-		print "regenerating synthetic data..."
-		if os.path.exists(dire):
-			for root, dirs, files in os.walk(dire, topdown=False):
-				for name in files:
-					os.remove(os.path.join(root, name))
-				for name in dirs:
-					os.rmdir(os.path.join(root, name))
-		else: os.mkdir(dire)
-	for i, sigma in sigmaList:
-		if not os.path.exists(dire+str(i)+"dat"):
-			X,y,Base = syntheticGenerator(n=20,d=[2,3,2,6,3,2],N=[200,50,300,150,200,600],sigma=sigma,orthonormal=True)
-			with open(dire+str(i)+"dat",'w+') as f:
-				json.dump([X.tolist(),y.tolist(),Base],f)
-	os.chdir(dire)
-	for i, sigma in sigmaList:
-		subdire = "s"+str(i)+"/"
-		if not os.path.exists(subdire):
-			os.mkdir(subdire)
-		filename = str(i)+"dat"
-		argument = ["",filename,subdire,filename]
-		sscfilename  = subdire+"SSCres_"+filename
-		esscfilename = subdire+"ESSCres_"+filename
-		print ""
-		print filename,":\tsigma = ",sigma
-		if len(args) == 2 and os.path.exists(sscfilename) and os.path.exists(esscfilename):
-			for nul in xrange(2):
-				with open(sscfilename,'r') as f:
-					SSCresult = json.load(f)
-				with open(esscfilename,'r') as f:
-					ESSCresult = json.load(f)
-				with open(filename,'r') as f:
-					tempX = json.load(f)
-					y = tempX[1]
-					tempX = None
-				# print "SSC",SSCresult
-				# print "ESSC",ESSCresult
-				# print "Ans",y
-				print "SSC vs Ans",evaluate(y,SSCresult)
-				print "ESSC vs Ans",evaluate(y,ESSCresult)
-				print "SSC vs ESSC",evaluate(SSCresult,ESSCresult)
-				print ""
-				sscfilename  = sscfilename  + "k"
-				esscfilename = esscfilename + "k"
-		elif os.path.exists("writing_"+filename):
-			continue
-		else:
-			with open("writing_"+filename,'w+') as f:
-				f.write("%d"%(os.getpid()))
-			with open("writing_"+filename,'r') as f:
-				if int(f.readline()) != os.getpid():
-					continue
-			runESSCSyn(argument)
-			runSSCSyn(argument)
-			compareESSCnSSCwithC(argument)
-			argument = ["",filename,subdire,filename+"k","k"]
-			runESSCSyn(argument)
-			runSSCSyn(argument)
-			compareESSCnSSCwithC(argument)
-			#os.unlink("writing_"+filename)
-			with open("finish_"+filename,'w+') as f:
-				f.write("%d"%(os.getpid()))
-
 if __name__ == "__main__":
 	args = [s for s in sys.argv]
 	if sys.argv[1] == "mytrial1":
@@ -1309,8 +938,8 @@ if __name__ == "__main__":
 		mytrial5(args)
 	else:
 		genSyn(args)
-		runESSCSyn(args)
-		runSSCSyn(args)
+		computeESSC_C(args)
+		computeSSC_C(args)
 		compareESSCnSSCwithC(args)
 		#runESSCReal(args,reduct=True)
 

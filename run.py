@@ -1,4 +1,4 @@
-1import essc
+import essc
 from essc import *
 import sys
 import os
@@ -191,5 +191,6 @@ def trial_FDdistribution(args):
 
 if __name__ == "__main__":
 	args = [s for s in sys.argv]
+	mytrial3(args)
 	# trial(args)
-	trial_FDdistribution(args)
+	# trial_FDdistribution(args)
