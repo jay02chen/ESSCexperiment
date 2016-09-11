@@ -539,7 +539,7 @@ def computeSSC_C_with_d(args):
 	if os.path.exists(outfile):
 		return False
 	with open(infile,'r') as f:
-		X = json.load(f)
+		buf = json.load(f)
 		y = buf[1]
 		d = buf[3][1]
 		X = buf[0]
