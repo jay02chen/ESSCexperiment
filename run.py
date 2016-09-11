@@ -4,10 +4,16 @@ import sys
 import os
 import json
 import numpy as np
+import matplotlib.mlab as mlab
+import matplotlib.pyplot as plt
+from scipy import sqrt
+from numpy import log10
+from cvxopt import matrix
+from cvxopt import solvers
 from sklearn.preprocessing import normalize
 
 def trial(args):
-	dire = args[1]
+	dire = args[1]+"/"
 	sigmaList = [0.001,0.01,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
 	sigmaList = sorted(zip(range(len(sigmaList)),sigmaList),key=lambda x:x[1])
 	if (len(args) > 2 and args[2] == "redo") or not os.path.exists(dire):
@@ -15,7 +21,7 @@ def trial(args):
 		emptyDir(dire)
 	for i, sigma in sigmaList:
 		if not os.path.exists(dire+str(i)+"dat"):
-			X,y,Base,meta = syntheticGenerator(n=20,d=[3,3,3,3,3,3],N=[40,10,60,30,40,120],sigma=sigma,orthonormal=True)
+			X,y,Base,meta = syntheticGenerator(n=20,d=[3,3,3,3,3,3],N=[400,100,600,300,400,1200],sigma=sigma,orthonormal=True)
 			with open(dire+str(i)+"dat",'w+') as f:
 				json.dump([X.tolist(),y.tolist(),Base,meta],f)
 	os.chdir(dire)
@@ -126,8 +132,63 @@ def subtrial(args):
 	print "ESSC vs Ans",evaluate(y,ESSCresult)
 	print "SSC vs ESSC",evaluate(SSCresult,ESSCresult)
 
+def trial_FDdistribution(args):
+	outdire = args[1]
+	if outdire[-1] != "/":
+		outdire = outdire + "/"
+	emptyDir(outdire)
+	os.chdir(outdire)
+	Sigma = [0.3,0.8]
+	Trials = 300
+	Dimension = np.array([2,2])
+	Points = np.array([10,10])
+	Distr = []
+	Weight = []
+	Pos = []
+	for sigma in Sigma:
+		for exp in xrange(4):
+			distr = []
+			enum = 0
+			for t in xrange(Trials):
+				X,y,Base,meta = syntheticGenerator(n=10,d=Dimension,N=Points,sigma=sigma,orthonormal=True)
+				xi = X[0]
+				X_mi = X[1:,:]
+				lambd = np.float64(1)/sqrt(Dimension[y[0]])
+				lambd = sqrt(0.5*lambd)
+				c = l1regls(matrix(X_mi).T*lambd,matrix(xi)*lambd)
+				c = np.array(c).reshape(-1)
+				c = log10(abs(c))
+				# c = abs(c)
+				for i in xrange(len(c)):
+					key = c[i]
+					if y[i+1] == y[0]:
+						distr.append(key)
+					else: enum = enum + 1
+			pos = np.float64(len(distr))/(len(distr)+enum)
+			dw = np.ones_like(distr)*pos/len(distr)
+			Distr.append(distr)
+			Weight.append(dw)
+			Pos.append(pos)
+			Points = Points * 10
+		maximum = int(np.ceil(max([max(d) for d in Distr])))
+		minimum = int(np.floor(min([min(d) for d in Distr])))
+		rg = np.linspace(minimum,maximum,24)
+		plt.hist(Distr[0],bins=rg,weights=Weight[0], facecolor='blue',label="10 pts",alpha=1)
+		plt.hist(Distr[1],bins=rg,weights=Weight[1], facecolor='green',label="100 pts",alpha=0.8)
+		plt.hist(Distr[2],bins=rg,weights=Weight[2], facecolor='red',label="1000 pts",alpha=0.7)
+		plt.hist(Distr[3],bins=rg,weights=Weight[3], facecolor='burlywood',label="10000 pts",alpha=0.7)
+		plt.legend()
+		plt.grid()
+		plt.xlabel('log(abs(c))')
+		plt.title("sigma = "+str(sigma))
+		plt.savefig("sigma"+str(sigma*10)+".png")
+		with open("sigma"+str(sigma*10)+"_pos",'w+') as f:
+			json.dump(Pos,f)
+	plt.show()
+
+
+
 if __name__ == "__main__":
 	args = [s for s in sys.argv]
-	if sys.argv[1] == "trial1":
-		args[1] = "trial1/"
-		trial(args)
+	# trial(args)
+	trial_FDdistribution(args)
