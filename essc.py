@@ -520,27 +520,13 @@ def computeSSC_C(args):
 	if os.path.exists(outfile):
 		return False
 	with open(infile,'r') as f:
-		buf = json.load(f)
-		y = buf[1]
-		d = buf[3][1]
-		X = buf[0]
-	buf = None
+		X = json.load(f)
+		y = X[1]
+		X = X[0]
+
 	X = np.array(X)
 	X = normalize(X,axis=1)
-	###
-	print "sigma = %f\n"%(sigma)
-	for n in xrange(len(X)):
-		C = np.zeros((len(A),len(A))).tolist()
-		lambd = np.sqrt(np.sqrt(d[y[n]])/2)
-		w = l1regls(matrix(np.delete(X,n,axis=0)).T*lambd,matrix(X[n])*lambd)
-		for i in xrange(n):
-			if abs(w[i]) > zeroThreshold:
-				C[n][i] = w[i]
-		for i in xrange(n,len(w)):
-			if abs(w[i]) > zeroThreshold:
-				C[n][i+1] = w[i]
-		print n,(2*lambd**2)**2 #print index and dimension of subspace
-	###
+	C = constructSR(X,zeroThreshold=0,aprxInf=9e+4)
 	with open(outfile,'w+') as f:
 		json.dump(C,f)
 	C = None
@@ -562,7 +548,6 @@ def computeSSC_C_with_d(args):
 	X = np.array(X)
 	X = normalize(X,axis=1)
 	###
-	print "sigma = %f\n"%(sigma)
 	for n in xrange(len(X)):
 		C = np.zeros((len(A),len(A))).tolist()
 		lambd = np.sqrt(np.sqrt(d[y[n]])/2)
