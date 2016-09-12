@@ -134,43 +134,68 @@ def subtrial(args):
 	print "SSC vs ESSC",evaluate(SSCresult,ESSCresult)
 
 def trial_FDdistribution(args):
+	solvers.options['show_progress'] = False
 	outdire = args[1]
 	if outdire[-1] != "/":
 		outdire = outdire + "/"
 	emptyDir(outdire)
 	os.chdir(outdire)
 	Sigma = [0.3,0.8]
-	Trials = 300
+	project2 = True
+	totalTrials = 20000
 	Dimension = np.array([2,2])
-	Points = np.array([10,10])
-	Distr = []
-	Weight = []
-	Pos = []
+	initPoints = np.array([10,10])
+	figcount = 1
 	for sigma in Sigma:
+		Points = initPoints
+		plt.figure(figcount,figsize=(12,9))
+		Distr = []
+		Weight = []
 		for exp in xrange(4):
 			distr = []
 			enum = 0
+			#avgC = np.zeros((num_Points,num_Points))
+			num_Points = int(np.sum(Points))
+			if project2:
+				Trials = totalTrials/num_Points
+			else: Trials = totalTrials
+			if Trials == 0:
+				Trials = 1
 			for t in xrange(Trials):
-				print sigma,exp,t
 				X,y,Base,meta = syntheticGenerator(n=10,d=Dimension,N=Points,sigma=sigma,orthonormal=True)
-				xi = X[0]
-				X_mi = X[1:,:]
-				lambd = sqrt(Dimension[y[0]])
-				lambd = sqrt(0.5*lambd)
-				c = l1regls(matrix(X_mi).T*lambd,matrix(xi)*lambd)
-				c = np.array(c).reshape(-1)
-				c = log10(abs(c))
-				# c = abs(c)
-				for i in xrange(len(c)):
-					key = c[i]
-					if y[i+1] == y[0]:
-						distr.append(key)
-					else: enum = enum + 1
+				#"""
+				if project2:
+					for i in xrange(num_Points):
+						print "xi(%d/%d),\tTrials(%d/%d),\texp=%d,\tsigma=%.1f"%(i,num_Points,t,Trials,exp,sigma)
+						xi = X[i]
+						X_mi = np.delete(X,i,axis=0)
+						lambd = sqrt(Dimension[y[i]])
+						lamb = sqrt(0.5*lambd)
+						c = l1regls(matrix(X_mi).T*lambd,matrix(xi)*lambd)
+						c = np.array(c).reshape(-1)
+						c = log10(abs(c))
+						for j in xrange(len(c)):
+							if (j < i and y[j] == y[i]) or (j >= i and y[j+1] == y[i]):
+								distr.append(c[j])
+							else: enum = enum + 1
+				else:
+					print "Trials(%d/%d),\texp=%d,\tpts=%d,\tsigma=%.1f"%(t,Trials,exp,num_Points,sigma)
+					xi = X[0]
+					X_mi = X[1:,:]
+					lambd = sqrt(Dimension[y[0]])
+					lambd = sqrt(0.5*lambd)
+					c = l1regls(matrix(X_mi).T*lambd,matrix(xi)*lambd)
+					c = np.array(c).reshape(-1)
+					c = log10(abs(c))
+					for j in xrange(len(c)):
+						key = c[j]
+						if y[j+1] == y[0]:
+							distr.append(key)
+						else: enum = enum + 1
 			pos = np.float64(len(distr))/(len(distr)+enum)
 			dw = np.ones_like(distr)*pos/len(distr)
 			Distr.append(distr)
 			Weight.append(dw)
-			Pos.append(pos)
 			Points = Points * 10
 		maximum = int(np.ceil(max([max(d) for d in Distr])))
 		minimum = int(np.floor(min([min(d) for d in Distr])))
@@ -184,14 +209,13 @@ def trial_FDdistribution(args):
 		plt.xlabel('log(abs(c))')
 		plt.title("sigma = "+str(sigma))
 		plt.savefig("sigma"+str(sigma*10)+".png")
-		with open("sigma"+str(sigma*10)+"_pos",'w+') as f:
-			json.dump(Pos,f)
+		figcount = fitcount + 1
 	plt.show()
 
 
 
 if __name__ == "__main__":
 	args = [s for s in sys.argv]
-	mytrial3(args)
+	# mytrial3(args)
 	# trial(args)
-	# trial_FDdistribution(args)
+	trial_FDdistribution(args)
