@@ -8,6 +8,7 @@ import matplotlib.mlab as mlab
 import matplotlib.pyplot as plt
 from scipy import sqrt
 from numpy import log10
+from numpy import floor
 from cvxopt import matrix
 from cvxopt import solvers
 from sklearn.preprocessing import normalize
@@ -141,7 +142,9 @@ def trial_FDdistribution(args):
 	emptyDir(outdire)
 	os.chdir(outdire)
 	Sigma = [0.3,0.8]
-	project2 = True
+	Range = range(-17,1)
+	Bins = range(-18,2)
+	project2 = False
 	totalTrials = 20000
 	Dimension = np.array([2,2])
 	initPoints = np.array([10,10])
@@ -150,9 +153,8 @@ def trial_FDdistribution(args):
 		Points = initPoints
 		plt.figure(figcount,figsize=(12,9))
 		Distr = []
-		Weight = []
 		for exp in xrange(4):
-			distr = []
+			distr= np.zeros_like(Bins)
 			enum = 0
 			#avgC = np.zeros((num_Points,num_Points))
 			num_Points = int(np.sum(Points))
@@ -163,10 +165,9 @@ def trial_FDdistribution(args):
 				Trials = 1
 			for t in xrange(Trials):
 				X,y,Base,meta = syntheticGenerator(n=10,d=Dimension,N=Points,sigma=sigma,orthonormal=True)
-				#"""
 				if project2:
 					for i in xrange(num_Points):
-						print "xi(%d/%d),\tTrials(%d/%d),\texp=%d,\tsigma=%.1f"%(i,num_Points,t,Trials,exp,sigma)
+						print "xi(%d/%d),\tTrials(%d/%d),\texp=%d,sigma=%.1f"%(i,num_Points,t,Trials,exp,sigma)
 						xi = X[i]
 						X_mi = np.delete(X,i,axis=0)
 						lambd = sqrt(Dimension[y[i]])
@@ -176,10 +177,14 @@ def trial_FDdistribution(args):
 						c = log10(abs(c))
 						for j in xrange(len(c)):
 							if (j < i and y[j] == y[i]) or (j >= i and y[j+1] == y[i]):
-								distr.append(c[j])
+								if c[j] < Bins[1]:
+									distr[0] = distr[0] + 1
+								elif c[j] >= Bins[-1]:
+									distr[-1] = distr[-1] + 1
+								else: distr[int(floor(c[j]))-Bins[1]+1] = distr[int(floor(c[j]))-Bins[1]+1] + 1
 							else: enum = enum + 1
 				else:
-					print "Trials(%d/%d),\texp=%d,\tpts=%d,\tsigma=%.1f"%(t,Trials,exp,num_Points,sigma)
+					print "Trials(%d/%d),  exp=%d,pts=%d,sigma=%.1f"%(t,Trials,exp,num_Points,sigma)
 					xi = X[0]
 					X_mi = X[1:,:]
 					lambd = sqrt(Dimension[y[0]])
@@ -188,28 +193,27 @@ def trial_FDdistribution(args):
 					c = np.array(c).reshape(-1)
 					c = log10(abs(c))
 					for j in xrange(len(c)):
-						key = c[j]
 						if y[j+1] == y[0]:
-							distr.append(key)
+							if c[j] < Bins[1]:
+								distr[0] = distr[0] + 1
+							elif c[j] >= Bins[-1]:
+								distr[-1] = distr[-1] + 1
+							else: distr[int(floor(c[j]))-Bins[1]+1] = distr[int(floor(c[j]))-Bins[1]+1] + 1
 						else: enum = enum + 1
-			pos = np.float64(len(distr))/(len(distr)+enum)
-			dw = np.ones_like(distr)*pos/len(distr)
+			pos = np.float64(np.sum(distr))/(np.sum(distr)+enum)
+			distr = distr*pos/np.sum(distr)
 			Distr.append(distr)
-			Weight.append(dw)
 			Points = Points * 10
-		maximum = int(np.ceil(max([max(d) for d in Distr])))
-		minimum = int(np.floor(min([min(d) for d in Distr])))
-		rg = np.linspace(minimum,maximum,24)
-		plt.hist(Distr[0],bins=rg,weights=Weight[0], facecolor='blue',label="10 pts",alpha=1)
-		plt.hist(Distr[1],bins=rg,weights=Weight[1], facecolor='green',label="100 pts",alpha=0.8)
-		plt.hist(Distr[2],bins=rg,weights=Weight[2], facecolor='red',label="1000 pts",alpha=0.7)
-		plt.hist(Distr[3],bins=rg,weights=Weight[3], facecolor='burlywood',label="10000 pts",alpha=0.7)
+		plt.hist(Bins,bins=Range,weights=Distr[0], facecolor='blue',label="10 pts",alpha=1)
+		plt.hist(Bins,bins=Range,weights=Distr[1], facecolor='green',label="100 pts",alpha=0.8)
+		plt.hist(Bins,bins=Range,weights=Distr[2], facecolor='red',label="1000 pts",alpha=0.7)
+		plt.hist(Bins,bins=Range,weights=Distr[3], facecolor='burlywood',label="10000 pts",alpha=0.7)
 		plt.legend()
 		plt.grid()
 		plt.xlabel('log(abs(c))')
 		plt.title("sigma = "+str(sigma))
 		plt.savefig("sigma"+str(sigma*10)+".png")
-		figcount = fitcount + 1
+		figcount = figcount + 1
 	plt.show()
 
 
