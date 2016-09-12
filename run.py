@@ -144,7 +144,7 @@ def trial_FDdistribution(args):
 	Sigma = [0.3,0.8]
 	Range = range(-17,1)
 	Bins = range(-18,2)
-	project2 = False
+	project2 = True
 	totalTrials = 20000
 	num_Experiments = 4
 	Dimension = np.array([2,2])
@@ -156,11 +156,11 @@ def trial_FDdistribution(args):
 		json.dump(Range,f)
 	for sigma in Sigma:
 		Points = initPoints
-		plt.figure(figcount,figsize=(12,9))
 		Distr = []
+		EDistr = []
 		for exp in xrange(num_Experiments):
 			distr= np.zeros_like(Bins)
-			enum = 0
+			edistr= np.zeros_like(Bins)
 			#avgC = np.zeros((num_Points,num_Points))
 			num_Points = int(np.sum(Points))
 			if project2:
@@ -187,7 +187,12 @@ def trial_FDdistribution(args):
 								elif c[j] >= Bins[-1]:
 									distr[-1] = distr[-1] + 1
 								else: distr[int(floor(c[j]))-Bins[1]+1] = distr[int(floor(c[j]))-Bins[1]+1] + 1
-							else: enum = enum + 1
+							else:
+								if c[j] < Bins[1]:
+									edistr[0] = edistr[0] + 1
+								elif c[j] >= Bins[-1]:
+									edistr[-1] = edistr[-1] + 1
+								else: edistr[int(floor(c[j]))-Bins[1]+1] = edistr[int(floor(c[j]))-Bins[1]+1] + 1
 				else:
 					print "Trials(%d/%d),  exp=%d,pts=%d,sigma=%.1f"%(t,Trials,exp,num_Points,sigma)
 					xi = X[0]
@@ -204,11 +209,32 @@ def trial_FDdistribution(args):
 							elif c[j] >= Bins[-1]:
 								distr[-1] = distr[-1] + 1
 							else: distr[int(floor(c[j]))-Bins[1]+1] = distr[int(floor(c[j]))-Bins[1]+1] + 1
-						else: enum = enum + 1
-			pos = np.float64(np.sum(distr))/(np.sum(distr)+enum)
+						else:
+							if c[j] < Bins[1]:
+								edistr[0] = edistr[0] + 1
+							elif c[j] >= Bins[-1]:
+								edistr[-1] = edistr[-1] + 1
+							else: edistr[int(floor(c[j]))-Bins[1]+1] = edistr[int(floor(c[j]))-Bins[1]+1] + 1
+			pos = np.float64(np.sum(distr))/(np.sum(distr)+np.sum(edistr))
 			distr = distr*pos/np.sum(distr)
+			edistr = edistr*(1.-pos)/np.sum(edistr)
 			Distr.append(distr.tolist())
+			EDistr.append(edistr.tolist())
+			plt.figure(figcount,figsize=(12,9))
+			plt.hist(Bins,bins=Range,weights=distr,facecolor='green',label="True discovery",alpha=0.7)
+			plt.hist(Bins,bins=Range,weights=edistr,facecolor='red',label="False discovery",alpha=0.8)
+			plt.legend()
+			plt.grid()
+			plt.xlabel('log(abs(c))')
+			plt.title("sigma = "+str(sigma)+", pts = "+str(int(Points[0])))
+			plt.savefig("ft"+str(int(sigma*10))+"_"+str(int(Points[0])))
+			with open ("false"+str(int(sigma*10))+"_"+str(int(Points[0])),'w+') as f:
+				json.dump(edistr.tolist(),f)
+			with open ("true"+str(int(sigma*10))+"_"+str(int(Points[0])),'w+') as f:
+				json.dump(distr.tolist(),f)
+			figcount = figcount + 1
 			Points = Points * 10
+		plt.figure(figcount,figsize=(12,9))
 		plt.hist(Bins,bins=Range,weights=Distr[0], facecolor='blue',label="10 pts",alpha=1)
 		plt.hist(Bins,bins=Range,weights=Distr[1], facecolor='green',label="100 pts",alpha=0.8)
 		plt.hist(Bins,bins=Range,weights=Distr[2], facecolor='red',label="1000 pts",alpha=0.7)
@@ -221,12 +247,12 @@ def trial_FDdistribution(args):
 		with open("distr"+str(int(sigma*10)),'w+') as f:
 			json.dump(Distr,f)
 		figcount = figcount + 1
-	plt.show()
+	#plt.show()
 
 
 
 if __name__ == "__main__":
 	args = [s for s in sys.argv]
-	# mytrial3(args)
+	mytrial3(args)
 	# trial(args)
-	trial_FDdistribution(args)
+	# trial_FDdistribution(args)
