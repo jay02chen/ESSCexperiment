@@ -146,14 +146,19 @@ def trial_FDdistribution(args):
 	Bins = range(-18,2)
 	project2 = False
 	totalTrials = 20000
+	num_Experiments = 4
 	Dimension = np.array([2,2])
 	initPoints = np.array([10,10])
 	figcount = 1
+	with open("bins",'w+') as f:
+		json.dump(Bins,f)
+	with open("range",'w+') as f:
+		json.dump(Range,f)
 	for sigma in Sigma:
 		Points = initPoints
 		plt.figure(figcount,figsize=(12,9))
 		Distr = []
-		for exp in xrange(4):
+		for exp in xrange(num_Experiments):
 			distr= np.zeros_like(Bins)
 			enum = 0
 			#avgC = np.zeros((num_Points,num_Points))
@@ -202,7 +207,7 @@ def trial_FDdistribution(args):
 						else: enum = enum + 1
 			pos = np.float64(np.sum(distr))/(np.sum(distr)+enum)
 			distr = distr*pos/np.sum(distr)
-			Distr.append(distr)
+			Distr.append(distr.tolist())
 			Points = Points * 10
 		plt.hist(Bins,bins=Range,weights=Distr[0], facecolor='blue',label="10 pts",alpha=1)
 		plt.hist(Bins,bins=Range,weights=Distr[1], facecolor='green',label="100 pts",alpha=0.8)
@@ -212,7 +217,9 @@ def trial_FDdistribution(args):
 		plt.grid()
 		plt.xlabel('log(abs(c))')
 		plt.title("sigma = "+str(sigma))
-		plt.savefig("sigma"+str(sigma*10)+".png")
+		plt.savefig("sigma"+str(int(sigma*10))+".png")
+		with open("distr"+str(int(sigma*10)),'w+') as f:
+			json.dump(Distr,f)
 		figcount = figcount + 1
 	plt.show()
 
