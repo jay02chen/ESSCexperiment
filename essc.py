@@ -736,9 +736,9 @@ def CompareESSCnSSCwithC(args):
 
 def mytrial3(args):
 	dire = args[1]+"/"
-	# sigmaList = [0.001,0.01,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
+	sigmaList = [0.001,0.01,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
 	num_point = 200
-	sigmaList = np.linspace(np.float64(1)/num_point,1,num_point)
+	# sigmaList = np.linspace(np.float64(1)/num_point,1,num_point)
 	sigmaList = sorted(zip(range(len(sigmaList)),sigmaList),key=lambda x:x[1])
 	if (len(args) > 2 and args[2] == "redo") or not os.path.exists(dire):
 		print "regenerating synthetic data..."
@@ -820,12 +820,12 @@ def mytrial3(args):
 			with open("writing_"+filename,'r') as f:
 				if int(f.readline()) != os.getpid():
 					continue
-			computeESSC_C_with_d(argument)
-			computeSSC_C_with_d(argument)
+			# computeESSC_C_with_d(argument)
+			# computeSSC_C_with_d(argument)
 			CompareESSCnSSCwithC(argument)
 			argument = ["",filename,subdire,filename+"k","k"]
-			computeESSC_C_with_d(argument)
-			computeSSC_C_with_d(argument)
+			# computeESSC_C_with_d(argument)
+			# computeSSC_C_with_d(argument)
 			CompareESSCnSSCwithC(argument)
 			os.unlink("writing_"+filename)
 	##
@@ -852,13 +852,13 @@ def mytrial3(args):
 			y2 = [YvESSC[idx2][name] for idx2 in xrange(m)]
 			x3 = [sigmaList[idx2][1] for idx2 in xrange(m)]
 			y3 = [YvCSPA[idx2][name] for idx2 in xrange(m)]
-			ax.plot(x1,y1, color='r', linewidth=2.0, label='SSC v.s. Ans')
-			ax.plot(x2,y2, color='g', linewidth=2.0, label='ESSC v.s. Ans')
-			ax.plot(x3,y3, color='b', linewidth=2.0, label='CSPA v.s. Ans')
-			# box = ax.get_position()
-			# ax.set_position([box.x0, box.y0 + box.height * 0.1,box.width, box.height * 0.9])
-			# ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05),fancybox=True, shadow=True, ncol=2, fontsize='x-small')
-			ax.legend()
+			ax.plot(x1,y1, color='g', linewidth=1.0, label='SSC v.s. Ans')
+			ax.plot(x2,y2, color='r', linewidth=2.0, label='ESSC v.s. Ans')
+			ax.plot(x3,y3, color='b', linewidth=1.0, label='CSPA v.s. Ans')
+			box = ax.get_position()
+			ax.set_position([box.x0, box.y0 + box.height * 0.1,box.width, box.height * 0.9])
+			ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05),fancybox=True, shadow=True, ncol=2, fontsize='x-small')
+			# ax.legend()
 			plt.xlabel("sigma")
 			plt.ylabel(name)
 			# plt.title(name)
@@ -880,13 +880,13 @@ def mytrial3(args):
 			y2 = [YvESSCk[idx2][name] for idx2 in xrange(m)]
 			x3 = [sigmaList[idx2][1] for idx2 in xrange(m)]
 			y3 = [YvCSPAk[idx2][name] for idx2 in xrange(m)]
-			ax.plot(x1,y1, color='r', linewidth=2.0, label='SSC v.s. Ans')
-			ax.plot(x2,y2, color='g', linewidth=2.0, label='ESSC v.s. Ans')
-			ax.plot(x3,y3, color='b', linewidth=2.0, label='CSPA v.s. Ans')
-			# box = ax.get_position()
-			# ax.set_position([box.x0, box.y0 + box.height * 0.1,box.width, box.height * 0.9])
-			# ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05),fancybox=True, shadow=True, ncol=2, fontsize='x-small')
-			ax.legend()
+			ax.plot(x1,y1, color='g', linewidth=1.0, label='SSC v.s. Ans')
+			ax.plot(x2,y2, color='r', linewidth=2.0, label='ESSC v.s. Ans')
+			ax.plot(x3,y3, color='b', linewidth=1.0, label='CSPA v.s. Ans')
+			box = ax.get_position()
+			ax.set_position([box.x0, box.y0 + box.height * 0.1,box.width, box.height * 0.9])
+			ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05),fancybox=True, shadow=True, ncol=2, fontsize='x-small')
+			# ax.legend()
 			plt.xlabel("sigma")
 			plt.ylabel(name)
 			# plt.title(name)
@@ -909,13 +909,13 @@ def mytrial3(args):
 			y2 = [YvESSC[idx2][name] for idx2 in xrange(m)]
 			x3 = [sigmaList[idx2][1] for idx2 in xrange(m)]
 			y3 = [YvCSPA[idx2][name] for idx2 in xrange(m)]
-			ax.plot(x1,y1, color='r', linewidth=2.0, label='SSC v.s. Ans')
-			ax.plot(x2,y2, color='g', linewidth=2.0, label='ESSC v.s. Ans')
-			ax.plot(x3,y3, color='b', linewidth=2.0, label='CSPA v.s. Ans')
-			# box = ax.get_position()
-			# ax.set_position([box.x0, box.y0 + box.height * 0.1,box.width, box.height * 0.9])
-			# ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05),fancybox=True, shadow=True, ncol=2, fontsize='x-small')
-			ax.legend()
+			ax.plot(x1,y1, color='g', linewidth=1.0, label='SSC v.s. Ans')
+			ax.plot(x2,y2, color='r', linewidth=2.0, label='ESSC v.s. Ans')
+			ax.plot(x3,y3, color='b', linewidth=1.0, label='CSPA v.s. Ans')
+			box = ax.get_position()
+			ax.set_position([box.x0, box.y0 + box.height * 0.1,box.width, box.height * 0.9])
+			ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05),fancybox=True, shadow=True, ncol=2, fontsize='x-small')
+			# ax.legend()
 			plt.xlabel("sigma")
 			plt.ylabel(name)
 			# plt.title(name)
@@ -938,13 +938,13 @@ def mytrial3(args):
 			y2 = [YvESSCk[idx2][name] for idx2 in xrange(m)]
 			x3 = [sigmaList[idx2][1] for idx2 in xrange(m)]
 			y3 = [YvCSPAk[idx2][name] for idx2 in xrange(m)]
-			ax.plot(x1,y1, color='r', linewidth=2.0, label='SSC v.s. Ans')
-			ax.plot(x2,y2, color='g', linewidth=2.0, label='ESSC v.s. Ans')
-			ax.plot(x3,y3, color='b', linewidth=2.0, label='CSPA v.s. Ans')
-			# box = ax.get_position()
-			# ax.set_position([box.x0, box.y0 + box.height * 0.1,box.width, box.height * 0.9])
-			# ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05),fancybox=True, shadow=True, ncol=2, fontsize='x-small')
-			ax.legend()
+			ax.plot(x1,y1, color='g', linewidth=1.0, label='SSC v.s. Ans')
+			ax.plot(x2,y2, color='r', linewidth=2.0, label='ESSC v.s. Ans')
+			ax.plot(x3,y3, color='b', linewidth=1.0, label='CSPA v.s. Ans')
+			box = ax.get_position()
+			ax.set_position([box.x0, box.y0 + box.height * 0.1,box.width, box.height * 0.9])
+			ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05),fancybox=True, shadow=True, ncol=2, fontsize='x-small')
+			# ax.legend()
 			plt.xlabel("sigma")
 			plt.ylabel(name)
 			# plt.title(name)
