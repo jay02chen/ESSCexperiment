@@ -737,7 +737,7 @@ def CompareESSCnSSCwithC(args):
 def mytrial3(args):
 	dire = args[1]+"/"
 	# sigmaList = [0.001,0.01,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
-	num_point = 200
+	num_point = 25
 	sigmaList = np.linspace(np.float64(1)/num_point,1,num_point)
 	sigmaList = sorted(zip(range(len(sigmaList)),sigmaList),key=lambda x:x[1])
 	if (len(args) > 2 and args[2] == "redo") or not os.path.exists(dire):
@@ -751,7 +751,12 @@ def mytrial3(args):
 		else: os.mkdir(dire)
 	for i, sigma in sigmaList:
 		if not os.path.exists(dire+str(i)+"dat"):
-			X,y,Base,meta = syntheticGenerator(n=20,d=[3,3,3,3,3,3],N=[40,10,60,30,40,120],sigma=sigma,orthonormal=True)
+			X,y,Base,meta = syntheticGenerator(n=20,d=[2,2,2,2,2,2],N=[40,10,60,30,40,120],sigma=sigma,orthonormal=False)
+			#X,y,Base,meta = syntheticGenerator(n=20,d=[2,2,2,2,2,2],N=[60,60,60,60,60,120],sigma=sigma,orthonormal=True)
+			#X,y,Base,meta = syntheticGenerator(n=20,d=[3,3,3,3,3,3],N=[60,60,60,60,60,120],sigma=sigma,orthonormal=True)
+			#X,y,Base,meta = syntheticGenerator(n=20,d=[4,4,4,4,4,4],N=[60,60,60,60,60,120],sigma=sigma,orthonormal=False)
+			#X,y,Base,meta = syntheticGenerator(n=20,d=[2,2,2,2,2,2],N=[40,10,60,30,40,120],sigma=sigma,orthonormal=True)
+			#X,y,Base,meta = syntheticGenerator(n=20,d=[2,2,2,2,2,2],N=[60,60,60,60,60,120],sigma=sigma,orthonormal=False)
 			with open(dire+str(i)+"dat",'w+') as f:
 				json.dump([X.tolist(),y.tolist(),Base,meta],f)
 	os.chdir(dire)
@@ -820,12 +825,12 @@ def mytrial3(args):
 			with open("writing_"+filename,'r') as f:
 				if int(f.readline()) != os.getpid():
 					continue
-			computeESSC_C_with_d(argument)
-			computeSSC_C_with_d(argument)
+			computeESSC_C(argument)
+			computeSSC_C(argument)
 			CompareESSCnSSCwithC(argument)
 			argument = ["",filename,subdire,filename+"k","k"]
-			computeESSC_C_with_d(argument)
-			computeSSC_C_with_d(argument)
+			computeESSC_C(argument)
+			computeSSC_C(argument)
 			CompareESSCnSSCwithC(argument)
 			os.unlink("writing_"+filename)
 	##
